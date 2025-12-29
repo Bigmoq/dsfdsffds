@@ -5,17 +5,42 @@ import { Input } from "@/components/ui/input";
 import { DressCard } from "./DressCard";
 import { DressDetailsSheet } from "./DressDetailsSheet";
 import { SellDressSheet } from "./SellDressSheet";
+import { DressFilterSheet, DressFilters } from "./DressFilterSheet";
 import { mockDresses, Dress } from "@/data/weddingData";
 
 export function DressesScreen() {
   const [selectedDress, setSelectedDress] = useState<Dress | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showSellSheet, setShowSellSheet] = useState(false);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<DressFilters>({
+    city: "",
+    size: "",
+    priceRange: [0, 10000]
+  });
 
-  const filteredDresses = mockDresses.filter((dress) =>
-    dress.title.includes(searchQuery) || dress.city.includes(searchQuery)
-  );
+  const filteredDresses = mockDresses.filter((dress) => {
+    // Search filter
+    const matchesSearch = dress.title.includes(searchQuery) || dress.city.includes(searchQuery);
+    
+    // City filter
+    const matchesCity = !filters.city || dress.city === filters.city;
+    
+    // Size filter
+    const matchesSize = !filters.size || dress.size === filters.size;
+    
+    // Price filter
+    const matchesPrice = dress.price >= filters.priceRange[0] && dress.price <= filters.priceRange[1];
+    
+    return matchesSearch && matchesCity && matchesSize && matchesPrice;
+  });
+
+  const activeFiltersCount = [
+    filters.city,
+    filters.size,
+    filters.priceRange[0] > 0 || filters.priceRange[1] < 10000
+  ].filter(Boolean).length;
 
   const handleDressClick = (dress: Dress) => {
     setSelectedDress(dress);
@@ -48,8 +73,16 @@ export function DressesScreen() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pr-10 pl-10 py-5 rounded-xl bg-card border-border/50 text-right"
           />
-          <button className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+          <button 
+            onClick={() => setShowFilterSheet(true)}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground relative"
+          >
             <SlidersHorizontal className="w-5 h-5" />
+            {activeFiltersCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -98,6 +131,14 @@ export function DressesScreen() {
       <SellDressSheet
         open={showSellSheet}
         onClose={() => setShowSellSheet(false)}
+      />
+
+      {/* Filter Sheet */}
+      <DressFilterSheet
+        open={showFilterSheet}
+        onClose={() => setShowFilterSheet(false)}
+        filters={filters}
+        onApplyFilters={setFilters}
       />
     </div>
   );

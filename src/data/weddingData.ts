@@ -258,6 +258,9 @@ export const cities = [
   { id: 'medina', nameEn: 'Medina', nameAr: 'المدينة' },
 ];
 
+// Arabic city names for dress filtering
+export const saudiCities = ['الرياض', 'جدة', 'الدمام', 'مكة', 'المدينة'];
+
 // Mock Dresses for C2C Marketplace
 export const mockDresses: Dress[] = [
   {
