@@ -43,6 +43,18 @@ export interface WeddingHall {
   features: string[];
 }
 
+export interface Dress {
+  id: string;
+  title: string;
+  price: number;
+  size: string;
+  city: string;
+  phone: string;
+  sellerName: string;
+  description: string;
+  images: string[];
+}
+
 // Women's Service Categories
 export const womenCategories: ServiceCategory[] = [
   { id: 'hair', nameAr: 'تساريح', nameEn: 'Hair Styling', icon: Sparkles, color: 'from-pink-400 to-rose-500' },
@@ -244,4 +256,92 @@ export const cities = [
   { id: 'dammam', nameEn: 'Dammam', nameAr: 'الدمام' },
   { id: 'mecca', nameEn: 'Mecca', nameAr: 'مكة' },
   { id: 'medina', nameEn: 'Medina', nameAr: 'المدينة' },
+];
+
+// Mock Dresses for C2C Marketplace
+export const mockDresses: Dress[] = [
+  {
+    id: 'd1',
+    title: 'فستان زفاف ملكي من إيلي صعب',
+    price: 15000,
+    size: 'M',
+    city: 'الرياض',
+    phone: '966501234567',
+    sellerName: 'نورة الأحمد',
+    description: 'فستان زفاف فاخر من تصميم إيلي صعب، تم ارتداؤه مرة واحدة فقط. يتميز بتطريز يدوي راقي وذيل طويل. مناسب للعروس التي تبحث عن الفخامة والأناقة.',
+    images: [
+      'https://images.unsplash.com/photo-1594463750939-ebb28c3f7f75?w=600',
+      'https://images.unsplash.com/photo-1585241920473-b472eb9ffbae?w=600',
+    ],
+  },
+  {
+    id: 'd2',
+    title: 'فستان سهرة ذهبي أنيق',
+    price: 3500,
+    size: 'S',
+    city: 'جدة',
+    phone: '966509876543',
+    sellerName: 'سارة العتيبي',
+    description: 'فستان سهرة باللون الذهبي مع تفاصيل كريستال. مثالي لحفلات الخطوبة أو حضور الأعراس.',
+    images: [
+      'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600',
+      'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600',
+    ],
+  },
+  {
+    id: 'd3',
+    title: 'فستان عروس كلاسيكي دانتيل',
+    price: 8000,
+    size: 'L',
+    city: 'الدمام',
+    phone: '966551122334',
+    sellerName: 'ليلى الشمري',
+    description: 'فستان زفاف كلاسيكي من الدانتيل الفرنسي، أكمام طويلة وقصة أميرية. جديد بالكرتون.',
+    images: [
+      'https://images.unsplash.com/photo-1519741497674-611481863552?w=600',
+      'https://images.unsplash.com/photo-1522653216967-e63eb6d8a3e6?w=600',
+    ],
+  },
+  {
+    id: 'd4',
+    title: 'فستان ملكة الليل أسود',
+    price: 4200,
+    size: 'M',
+    city: 'الرياض',
+    phone: '966505544332',
+    sellerName: 'هند القحطاني',
+    description: 'فستان سهرة أسود فاخر مع تطريز ذهبي. مناسب للمناسبات الرسمية والحفلات الخاصة.',
+    images: [
+      'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=600',
+      'https://images.unsplash.com/photo-1568252542512-9fe8fe9c87bb?w=600',
+    ],
+  },
+  {
+    id: 'd5',
+    title: 'فستان خطوبة وردي ناعم',
+    price: 2800,
+    size: 'XS',
+    city: 'جدة',
+    phone: '966508877665',
+    sellerName: 'ريم الحربي',
+    description: 'فستان خطوبة باللون الوردي الفاتح مع تنورة منفوشة. ارتديته مرة واحدة في حفل خطوبتي.',
+    images: [
+      'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600',
+      'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=600',
+    ],
+  },
+  {
+    id: 'd6',
+    title: 'فستان زفاف سندريلا',
+    price: 12000,
+    size: 'M',
+    city: 'الدمام',
+    phone: '966502233445',
+    sellerName: 'منال السبيعي',
+    description: 'فستان زفاف ساحر بتصميم سندريلا مع تنورة ضخمة وكورسيه مزين بالكريستال. حالة ممتازة.',
+    images: [
+      'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600',
+      'https://images.unsplash.com/photo-1594463750939-ebb28c3f7f75?w=600',
+    ],
+  },
 ];
