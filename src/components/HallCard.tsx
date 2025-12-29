@@ -5,9 +5,10 @@ import { WeddingHall } from "@/data/weddingData";
 interface HallCardProps {
   hall: WeddingHall;
   index: number;
+  onClick?: () => void;
 }
 
-export function HallCard({ hall, index }: HallCardProps) {
+export function HallCard({ hall, index, onClick }: HallCardProps) {
   const getDayLabel = (idx: number) => {
     const days = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
     return days[idx];
@@ -19,6 +20,7 @@ export function HallCard({ hall, index }: HallCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
       className="card-luxe rounded-2xl overflow-hidden group cursor-pointer hover:shadow-2xl transition-all duration-500"
+      onClick={onClick}
     >
       {/* Image Section */}
       <div className="relative h-48 overflow-hidden">

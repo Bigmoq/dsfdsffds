@@ -1,17 +1,25 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Search, SlidersHorizontal, MapPin, Calendar, Users } from "lucide-react";
-import { weddingHalls, cities } from "@/data/weddingData";
+import { weddingHalls, cities, WeddingHall } from "@/data/weddingData";
 import { HallCard } from "./HallCard";
+import { HallDetailsSheet } from "./HallDetailsSheet";
 import { Button } from "@/components/ui/button";
 
 export function HomeScreen() {
   const [selectedCity, setSelectedCity] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedHall, setSelectedHall] = useState<WeddingHall | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const filteredHalls = selectedCity === "all" 
     ? weddingHalls 
     : weddingHalls.filter(h => h.city.toLowerCase() === selectedCity);
+
+  const handleHallClick = (hall: WeddingHall) => {
+    setSelectedHall(hall);
+    setSheetOpen(true);
+  };
 
   return (
     <div className="min-h-screen pb-24">
@@ -124,10 +132,22 @@ export function HomeScreen() {
         
         <div className="space-y-4">
           {filteredHalls.map((hall, index) => (
-            <HallCard key={hall.id} hall={hall} index={index} />
+            <HallCard 
+              key={hall.id} 
+              hall={hall} 
+              index={index} 
+              onClick={() => handleHallClick(hall)}
+            />
           ))}
         </div>
       </div>
+
+      {/* Hall Details Sheet */}
+      <HallDetailsSheet 
+        hall={selectedHall}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+      />
     </div>
   );
 }
