@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { X, Plus, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Plus, Loader2, Upload, ImageIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,9 @@ const conditions = [
 export function AddDressSheet({ open, onOpenChange, editingDress, onSuccess }: AddDressSheetProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: "",
@@ -74,17 +76,89 @@ export function AddDressSheet({ open, onOpenChange, editingDress, onSuccess }: A
     setImageUrls([]);
   };
 
-  const handleAddImageUrl = () => {
-    if (imageUrls.length < 5) {
-      const url = prompt("أدخلي رابط صورة الفستان:");
-      if (url && url.trim()) {
-        setImageUrls(prev => [...prev, url.trim()]);
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !user) return;
+
+    const remainingSlots = 5 - imageUrls.length;
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+
+    if (filesToUpload.length === 0) {
+      toast({
+        title: "تنبيه",
+        description: "الحد الأقصى 5 صور",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const uploadPromises = filesToUpload.map(async (file) => {
+        // Validate file type
+        if (!file.type.startsWith("image/")) {
+          throw new Error("يجب أن تكون الملفات صور فقط");
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error("حجم الصورة يجب أن لا يتجاوز 5 ميجابايت");
+        }
+
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("dress-images")
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("dress-images")
+          .getPublicUrl(fileName);
+
+        return publicUrl;
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+      setImageUrls((prev) => [...prev, ...uploadedUrls]);
+
+      toast({
+        title: "تم الرفع",
+        description: `تم رفع ${uploadedUrls.length} صورة بنجاح`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "خطأ في الرفع",
+        description: error.message || "حدث خطأ أثناء رفع الصور",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
     }
   };
 
-  const removeImage = (index: number) => {
-    setImageUrls(prev => prev.filter((_, i) => i !== index));
+  const removeImage = async (index: number) => {
+    const urlToRemove = imageUrls[index];
+    
+    // Try to delete from storage if it's a storage URL
+    if (urlToRemove.includes("dress-images")) {
+      try {
+        const path = urlToRemove.split("dress-images/")[1];
+        if (path) {
+          await supabase.storage.from("dress-images").remove([path]);
+        }
+      } catch (error) {
+        console.log("Could not delete from storage:", error);
+      }
+    }
+    
+    setImageUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,9 +202,7 @@ export function AddDressSheet({ open, onOpenChange, editingDress, onSuccess }: A
           description: "تم تحديث بيانات الفستان بنجاح",
         });
       } else {
-        const { error } = await supabase
-          .from("dresses")
-          .insert(dressData);
+        const { error } = await supabase.from("dresses").insert(dressData);
 
         if (error) throw error;
 
@@ -165,15 +237,15 @@ export function AddDressSheet({ open, onOpenChange, editingDress, onSuccess }: A
           </SheetHeader>
 
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto py-4 space-y-4">
-            {/* Image URLs */}
+            {/* Image Upload */}
             <div className="space-y-2">
               <Label className="font-arabic">صور الفستان (حتى 5 صور)</Label>
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {imageUrls.map((img, idx) => (
                   <div key={idx} className="relative w-20 h-20 flex-shrink-0">
-                    <img 
-                      src={img} 
-                      alt="" 
+                    <img
+                      src={img}
+                      alt=""
                       className="w-full h-full object-cover rounded-lg"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "https://placehold.co/80x80?text=Error";
@@ -191,14 +263,33 @@ export function AddDressSheet({ open, onOpenChange, editingDress, onSuccess }: A
                 {imageUrls.length < 5 && (
                   <button
                     type="button"
-                    onClick={handleAddImageUrl}
-                    className="w-20 h-20 flex-shrink-0 border-2 border-dashed border-border rounded-lg flex items-center justify-center cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="w-20 h-20 flex-shrink-0 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors disabled:opacity-50"
                   >
-                    <Plus className="w-6 h-6 text-muted-foreground" />
+                    {isUploading ? (
+                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 text-muted-foreground mb-1" />
+                        <span className="text-[10px] text-muted-foreground font-arabic">رفع صورة</span>
+                      </>
+                    )}
                   </button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">أضيفي روابط صور الفستان</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <ImageIcon className="w-3 h-3" />
+                ارفعي صور الفستان (الحد الأقصى 5 ميجابايت لكل صورة)
+              </p>
             </div>
 
             {/* Title */}
@@ -237,7 +328,9 @@ export function AddDressSheet({ open, onOpenChange, editingDress, onSuccess }: A
                   </SelectTrigger>
                   <SelectContent className="bg-background">
                     {sizes.map((size) => (
-                      <SelectItem key={size} value={size}>{size}</SelectItem>
+                      <SelectItem key={size} value={size}>
+                        {size}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -257,7 +350,9 @@ export function AddDressSheet({ open, onOpenChange, editingDress, onSuccess }: A
                   </SelectTrigger>
                   <SelectContent className="bg-background">
                     {cities.map((city) => (
-                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -273,7 +368,9 @@ export function AddDressSheet({ open, onOpenChange, editingDress, onSuccess }: A
                   </SelectTrigger>
                   <SelectContent className="bg-background">
                     {conditions.map((cond) => (
-                      <SelectItem key={cond.value} value={cond.value}>{cond.label}</SelectItem>
+                      <SelectItem key={cond.value} value={cond.value}>
+                        {cond.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -309,7 +406,7 @@ export function AddDressSheet({ open, onOpenChange, editingDress, onSuccess }: A
             <Button
               type="submit"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploading}
               className="w-full py-6 text-lg font-arabic gold-gradient text-white rounded-xl"
             >
               {isSubmitting ? (
@@ -317,8 +414,10 @@ export function AddDressSheet({ open, onOpenChange, editingDress, onSuccess }: A
                   <Loader2 className="w-5 h-5 animate-spin" />
                   جاري الحفظ...
                 </span>
+              ) : editingDress ? (
+                "حفظ التغييرات"
               ) : (
-                editingDress ? "حفظ التغييرات" : "نشر الإعلان"
+                "نشر الإعلان"
               )}
             </Button>
           </div>
