@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Settings, Bell, HelpCircle, LogOut, ChevronLeft, Building2, Briefcase, Crown } from "lucide-react";
+import { User, Settings, Bell, HelpCircle, LogOut, ChevronLeft, Building2, Briefcase, Crown, Package, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { VendorApplicationSheet } from "./VendorApplicationSheet";
@@ -16,12 +16,30 @@ const menuItems = [
 
 export function ProfileScreen() {
   const navigate = useNavigate();
-  const { user, loading, signOut, isAuthenticated } = useAuth();
+  const { user, loading, signOut, isAuthenticated, role, isVendor } = useAuth();
   const [showVendorSheet, setShowVendorSheet] = useState(false);
   const [showVendorDashboard, setShowVendorDashboard] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
+  };
+
+  const getRoleLabel = () => {
+    switch (role) {
+      case "hall_owner": return "صاحب قاعة";
+      case "service_provider": return "مقدم خدمة";
+      case "dress_seller": return "بائع فساتين";
+      default: return "مستخدم";
+    }
+  };
+
+  const getRoleIcon = () => {
+    switch (role) {
+      case "hall_owner": return Building2;
+      case "service_provider": return Package;
+      case "dress_seller": return ShoppingBag;
+      default: return User;
+    }
   };
 
   if (loading) {
@@ -32,7 +50,7 @@ export function ProfileScreen() {
     );
   }
 
-  if (showVendorDashboard && isAuthenticated) {
+  if (showVendorDashboard && isAuthenticated && isVendor) {
     return (
       <div className="min-h-screen pb-24">
         <div className="gold-gradient px-4 pt-12 pb-6 relative overflow-hidden">
@@ -93,7 +111,10 @@ export function ProfileScreen() {
           className="card-luxe rounded-2xl p-6 text-center"
         >
           <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center border-4 border-primary/20">
-            <User className="w-10 h-10 text-muted-foreground" />
+            {(() => {
+              const RoleIcon = getRoleIcon();
+              return <RoleIcon className="w-10 h-10 text-muted-foreground" />;
+            })()}
           </div>
           
           {isAuthenticated ? (
@@ -101,9 +122,14 @@ export function ProfileScreen() {
               <h2 className="font-display text-xl font-bold text-foreground mb-1">
                 {user?.user_metadata?.full_name || "مرحباً بك"}
               </h2>
-              <p className="text-muted-foreground font-arabic text-sm mb-4">
+              <p className="text-muted-foreground font-arabic text-sm mb-2">
                 {user?.email}
               </p>
+              {role && (
+                <span className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-arabic">
+                  {getRoleLabel()}
+                </span>
+              )}
             </>
           ) : (
             <>
@@ -125,9 +151,9 @@ export function ProfileScreen() {
         </motion.div>
       </div>
       
-      {/* Vendor Actions - Only for authenticated users */}
-      {isAuthenticated && (
-        <div className="px-4 mt-6 space-y-3">
+      {/* Vendor Dashboard Button - Only for vendors */}
+      {isAuthenticated && isVendor && (
+        <div className="px-4 mt-6">
           <motion.button
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -142,11 +168,15 @@ export function ProfileScreen() {
               </div>
             </div>
           </motion.button>
-          
+        </div>
+      )}
+      
+      {/* Upgrade to Vendor - Only for regular users */}
+      {isAuthenticated && role === "user" && (
+        <div className="px-4 mt-6">
           <motion.button
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
             onClick={() => setShowVendorSheet(true)}
             className="w-full card-luxe rounded-xl p-4 flex items-center justify-between hover:shadow-lg transition-shadow border-2 border-dashed border-primary/30"
           >
@@ -170,7 +200,7 @@ export function ProfileScreen() {
               key={index}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: (isAuthenticated ? 0.2 : 0) + index * 0.1 }}
+              transition={{ delay: index * 0.1 }}
               className="w-full card-luxe rounded-xl p-4 flex items-center justify-between hover:shadow-lg transition-shadow"
             >
               <ChevronLeft className="w-5 h-5 text-muted-foreground" />
