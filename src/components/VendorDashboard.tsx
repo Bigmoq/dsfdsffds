@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Building2, Calendar, Package, Plus, ArrowRight } from "lucide-react";
+import { Building2, ShoppingBag, Package, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { HallManagement } from "./HallManagement";
+import { ServiceProviderManagement } from "./ServiceProviderManagement";
 import type { Database } from "@/integrations/supabase/types";
 
 type VendorRole = Database["public"]["Enums"]["vendor_role"];
@@ -71,6 +72,21 @@ export function VendorDashboard() {
     );
   }
 
+  if (activeVendorView === "service_provider") {
+    return (
+      <div>
+        <button
+          onClick={() => setActiveVendorView(null)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors p-4"
+        >
+          <span className="font-arabic text-sm">العودة للوحة التحكم</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+        <ServiceProviderManagement />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 space-y-6">
       {/* Approved Vendor Sections */}
@@ -91,7 +107,7 @@ export function VendorDashboard() {
               <div className="w-14 h-14 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0">
                 {app.role === "hall_owner" && <Building2 className="w-7 h-7 text-white" />}
                 {app.role === "service_provider" && <Package className="w-7 h-7 text-white" />}
-                {app.role === "dress_seller" && <Calendar className="w-7 h-7 text-white" />}
+                {app.role === "dress_seller" && <ShoppingBag className="w-7 h-7 text-white" />}
               </div>
               <div className="flex-1">
                 <h4 className="font-display text-lg font-bold text-foreground">
