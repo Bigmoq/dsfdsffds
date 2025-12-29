@@ -3,19 +3,22 @@ import { AnimatePresence, motion } from "framer-motion";
 import { BottomNav } from "@/components/BottomNav";
 import { HomeScreen } from "@/components/HomeScreen";
 import { ServicesScreen } from "@/components/ServicesScreen";
+import { DressesScreen } from "@/components/DressesScreen";
 import { FavoritesScreen } from "@/components/FavoritesScreen";
 import { ProfileScreen } from "@/components/ProfileScreen";
 import { Helmet } from "react-helmet-async";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(2); // Default to Home (center)
 
-  const screens = [
-    <HomeScreen key="home" />,
-    <ServicesScreen key="services" />,
-    <FavoritesScreen key="favorites" />,
-    <ProfileScreen key="profile" />,
-  ];
+  // Tab order: 0=Services, 1=Dresses, 2=Home, 3=Favorites, 4=Profile
+  const screens: Record<number, JSX.Element> = {
+    0: <ServicesScreen key="services" />,
+    1: <DressesScreen key="dresses" />,
+    2: <HomeScreen key="home" />,
+    3: <FavoritesScreen key="favorites" />,
+    4: <ProfileScreen key="profile" />,
+  };
 
   return (
     <>
