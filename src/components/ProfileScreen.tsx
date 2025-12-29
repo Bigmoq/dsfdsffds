@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Settings, Bell, HelpCircle, LogOut, ChevronLeft, Building2, Briefcase, Crown, Package, ShoppingBag } from "lucide-react";
+import { User, Settings, Bell, HelpCircle, LogOut, ChevronLeft, Building2, Briefcase, Crown, Package, ShoppingBag, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { VendorApplicationSheet } from "./VendorApplicationSheet";
 import { VendorDashboard } from "./VendorDashboard";
+import { MyBookings } from "./MyBookings";
 
 const menuItems = [
   { icon: User, label: "الملف الشخصي", labelEn: "Profile" },
@@ -19,6 +20,7 @@ export function ProfileScreen() {
   const { user, loading, signOut, isAuthenticated, role, isVendor } = useAuth();
   const [showVendorSheet, setShowVendorSheet] = useState(false);
   const [showVendorDashboard, setShowVendorDashboard] = useState(false);
+  const [showMyBookings, setShowMyBookings] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -46,6 +48,42 @@ export function ProfileScreen() {
     return (
       <div className="min-h-screen pb-24 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // My Bookings View
+  if (showMyBookings && isAuthenticated) {
+    return (
+      <div className="min-h-screen pb-24">
+        <div className="gold-gradient px-4 pt-12 pb-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6bTAtMTBjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
+          
+          <button
+            onClick={() => setShowMyBookings(false)}
+            className="flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-4"
+          >
+            <span className="font-arabic text-sm">العودة للحساب</span>
+            <ChevronLeft className="w-4 h-4 rotate-180" />
+          </button>
+          
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center relative z-10"
+          >
+            <h1 className="font-display text-3xl font-bold text-white mb-2">
+              حجوزاتي
+            </h1>
+            <p className="text-white/80 font-arabic text-sm">
+              متابعة حجوزات القاعات
+            </p>
+          </motion.div>
+        </div>
+        
+        <div className="p-4">
+          <MyBookings />
+        </div>
       </div>
     );
   }
@@ -150,10 +188,30 @@ export function ProfileScreen() {
           )}
         </motion.div>
       </div>
+
+      {/* My Bookings Button - For authenticated users */}
+      {isAuthenticated && (
+        <div className="px-4 mt-6">
+          <motion.button
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={() => setShowMyBookings(true)}
+            className="w-full card-luxe rounded-xl p-4 flex items-center justify-between hover:shadow-lg transition-shadow"
+          >
+            <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+            <div className="flex items-center gap-3">
+              <span className="font-arabic text-foreground">حجوزاتي</span>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-primary" />
+              </div>
+            </div>
+          </motion.button>
+        </div>
+      )}
       
       {/* Vendor Dashboard Button - Only for vendors */}
       {isAuthenticated && isVendor && (
-        <div className="px-4 mt-6">
+        <div className="px-4 mt-3">
           <motion.button
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -173,7 +231,7 @@ export function ProfileScreen() {
       
       {/* Upgrade to Vendor - Only for regular users */}
       {isAuthenticated && role === "user" && (
-        <div className="px-4 mt-6">
+        <div className="px-4 mt-3">
           <motion.button
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
