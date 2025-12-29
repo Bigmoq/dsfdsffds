@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, Upload, Loader2, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +20,13 @@ interface AddHallSheetProps {
 export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     name_ar: "",
@@ -31,11 +38,153 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
     capacity_women: "",
     price_weekday: "",
     price_weekend: "",
-    cover_image: "",
   });
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const uploadImage = async (file: File, folder: string): Promise<string | null> => {
+    if (!user) return null;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      throw new Error("يجب أن تكون الملفات صور فقط");
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("حجم الصورة يجب أن لا يتجاوز 5 ميجابايت");
+    }
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}/${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("hall-images")
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("hall-images")
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setIsUploadingCover(true);
+    try {
+      const url = await uploadImage(file, "covers");
+      if (url) {
+        setCoverImage(url);
+        toast({
+          title: "تم الرفع",
+          description: "تم رفع صورة الغلاف بنجاح",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "خطأ في الرفع",
+        description: error.message || "حدث خطأ أثناء رفع الصورة",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingCover(false);
+      if (coverInputRef.current) {
+        coverInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !user) return;
+
+    const remainingSlots = 10 - galleryImages.length;
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+
+    if (filesToUpload.length === 0) {
+      toast({
+        title: "تنبيه",
+        description: "الحد الأقصى 10 صور للمعرض",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingGallery(true);
+    try {
+      const uploadPromises = filesToUpload.map((file) => uploadImage(file, "gallery"));
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const validUrls = uploadedUrls.filter((url): url is string => url !== null);
+      
+      setGalleryImages((prev) => [...prev, ...validUrls]);
+      toast({
+        title: "تم الرفع",
+        description: `تم رفع ${validUrls.length} صورة بنجاح`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "خطأ في الرفع",
+        description: error.message || "حدث خطأ أثناء رفع الصور",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingGallery(false);
+      if (galleryInputRef.current) {
+        galleryInputRef.current.value = "";
+      }
+    }
+  };
+
+  const removeCoverImage = async () => {
+    if (coverImage?.includes("hall-images")) {
+      try {
+        const path = coverImage.split("hall-images/")[1];
+        if (path) {
+          await supabase.storage.from("hall-images").remove([path]);
+        }
+      } catch (error) {
+        console.log("Could not delete from storage:", error);
+      }
+    }
+    setCoverImage(null);
+  };
+
+  const removeGalleryImage = async (index: number) => {
+    const urlToRemove = galleryImages[index];
+    if (urlToRemove?.includes("hall-images")) {
+      try {
+        const path = urlToRemove.split("hall-images/")[1];
+        if (path) {
+          await supabase.storage.from("hall-images").remove([path]);
+        }
+      } catch (error) {
+        console.log("Could not delete from storage:", error);
+      }
+    }
+    setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name_ar: "",
+      name_en: "",
+      city: "",
+      address: "",
+      description: "",
+      capacity_men: "",
+      capacity_women: "",
+      price_weekday: "",
+      price_weekend: "",
+    });
+    setCoverImage(null);
+    setGalleryImages([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,7 +206,8 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
         capacity_women: parseInt(formData.capacity_women) || 0,
         price_weekday: parseInt(formData.price_weekday) || 0,
         price_weekend: parseInt(formData.price_weekend) || 0,
-        cover_image: formData.cover_image || null,
+        cover_image: coverImage,
+        gallery_images: galleryImages.length > 0 ? galleryImages : null,
       });
       
       if (error) throw error;
@@ -69,18 +219,7 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
       
       onSuccess();
       onOpenChange(false);
-      setFormData({
-        name_ar: "",
-        name_en: "",
-        city: "",
-        address: "",
-        description: "",
-        capacity_men: "",
-        capacity_women: "",
-        price_weekday: "",
-        price_weekend: "",
-        cover_image: "",
-      });
+      resetForm();
     } catch (error) {
       toast({
         title: "خطأ",
@@ -100,6 +239,102 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
         </SheetHeader>
         
         <form onSubmit={handleSubmit} className="space-y-5 pb-6">
+          {/* Cover Image Upload */}
+          <div className="space-y-2">
+            <Label className="font-arabic">صورة الغلاف</Label>
+            {coverImage ? (
+              <div className="relative w-full h-40 rounded-xl overflow-hidden">
+                <img
+                  src={coverImage}
+                  alt="Cover"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={removeCoverImage}
+                  className="absolute top-2 left-2 bg-destructive text-destructive-foreground rounded-full p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                disabled={isUploadingCover}
+                className="w-full h-32 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors disabled:opacity-50"
+              >
+                {isUploadingCover ? (
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                    <span className="text-sm text-muted-foreground font-arabic">اضغط لرفع صورة الغلاف</span>
+                  </>
+                )}
+              </button>
+            )}
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleCoverUpload}
+              className="hidden"
+            />
+          </div>
+
+          {/* Gallery Images Upload */}
+          <div className="space-y-2">
+            <Label className="font-arabic">معرض الصور (حتى 10 صور)</Label>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {galleryImages.map((img, idx) => (
+                <div key={idx} className="relative w-20 h-20 flex-shrink-0">
+                  <img
+                    src={img}
+                    alt=""
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeGalleryImage(idx)}
+                    className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+              {galleryImages.length < 10 && (
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  disabled={isUploadingGallery}
+                  className="w-20 h-20 flex-shrink-0 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors disabled:opacity-50"
+                >
+                  {isUploadingGallery ? (
+                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5 text-muted-foreground mb-1" />
+                      <span className="text-[10px] text-muted-foreground font-arabic">رفع</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleGalleryUpload}
+              className="hidden"
+            />
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <ImageIcon className="w-3 h-3" />
+              الحد الأقصى 5 ميجابايت لكل صورة
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="font-arabic">الاسم بالإنجليزية</Label>
@@ -207,19 +442,9 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
             </div>
           </div>
           
-          <div className="space-y-2">
-            <Label className="font-arabic">رابط صورة الغلاف</Label>
-            <Input
-              value={formData.cover_image}
-              onChange={(e) => handleChange("cover_image", e.target.value)}
-              placeholder="https://..."
-              dir="ltr"
-            />
-          </div>
-          
           <Button
             type="submit"
-            disabled={loading || !formData.name_ar || !formData.city}
+            disabled={loading || !formData.name_ar || !formData.city || isUploadingCover || isUploadingGallery}
             className="w-full gold-gradient text-white py-6"
           >
             <span className="font-arabic text-lg">
