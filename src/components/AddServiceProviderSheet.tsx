@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { X, Upload, Loader2, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +26,10 @@ const allCategories = [
 export function AddServiceProviderSheet({ open, onOpenChange, onSuccess }: AddServiceProviderSheetProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     name_ar: "",
@@ -39,6 +43,108 @@ export function AddServiceProviderSheet({ open, onOpenChange, onSuccess }: AddSe
 
   const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      throw new Error("يجب أن تكون الملفات صور فقط");
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("حجم الصورة يجب أن لا يتجاوز 5 ميجابايت");
+    }
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("service-images")
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("service-images")
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !user) return;
+
+    const remainingSlots = 10 - portfolioImages.length;
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+
+    if (filesToUpload.length === 0) {
+      toast({
+        title: "تنبيه",
+        description: "الحد الأقصى 10 صور للمعرض",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const uploadPromises = filesToUpload.map((file) => uploadImage(file));
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const validUrls = uploadedUrls.filter((url): url is string => url !== null);
+
+      setPortfolioImages((prev) => [...prev, ...validUrls]);
+
+      toast({
+        title: "تم الرفع",
+        description: `تم رفع ${validUrls.length} صورة بنجاح`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "خطأ في الرفع",
+        description: error.message || "حدث خطأ أثناء رفع الصور",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const removeImage = async (index: number) => {
+    const urlToRemove = portfolioImages[index];
+
+    if (urlToRemove?.includes("service-images")) {
+      try {
+        const path = urlToRemove.split("service-images/")[1];
+        if (path) {
+          await supabase.storage.from("service-images").remove([path]);
+        }
+      } catch (error) {
+        console.log("Could not delete from storage:", error);
+      }
+    }
+
+    setPortfolioImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name_ar: "",
+      name_en: "",
+      category_id: "",
+      city: "",
+      phone: "",
+      description: "",
+      whatsapp_enabled: true,
+    });
+    setPortfolioImages([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,6 +164,7 @@ export function AddServiceProviderSheet({ open, onOpenChange, onSuccess }: AddSe
         phone: formData.phone || null,
         description: formData.description || null,
         whatsapp_enabled: formData.whatsapp_enabled,
+        portfolio_images: portfolioImages.length > 0 ? portfolioImages : null,
       });
       
       if (error) throw error;
@@ -69,15 +176,7 @@ export function AddServiceProviderSheet({ open, onOpenChange, onSuccess }: AddSe
       
       onSuccess();
       onOpenChange(false);
-      setFormData({
-        name_ar: "",
-        name_en: "",
-        category_id: "",
-        city: "",
-        phone: "",
-        description: "",
-        whatsapp_enabled: true,
-      });
+      resetForm();
     } catch (error) {
       toast({
         title: "خطأ",
@@ -97,6 +196,58 @@ export function AddServiceProviderSheet({ open, onOpenChange, onSuccess }: AddSe
         </SheetHeader>
         
         <form onSubmit={handleSubmit} className="space-y-5 pb-6">
+          {/* Portfolio Images Upload */}
+          <div className="space-y-2">
+            <Label className="font-arabic">معرض الأعمال (حتى 10 صور)</Label>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {portfolioImages.map((img, idx) => (
+                <div key={idx} className="relative w-20 h-20 flex-shrink-0">
+                  <img
+                    src={img}
+                    alt=""
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+              {portfolioImages.length < 10 && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="w-20 h-20 flex-shrink-0 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors disabled:opacity-50"
+                >
+                  {isUploading ? (
+                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5 text-muted-foreground mb-1" />
+                      <span className="text-[10px] text-muted-foreground font-arabic">رفع</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <ImageIcon className="w-3 h-3" />
+              ارفع صور من أعمالك السابقة (الحد الأقصى 5 ميجابايت لكل صورة)
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="font-arabic">الاسم بالإنجليزية</Label>
@@ -200,7 +351,7 @@ export function AddServiceProviderSheet({ open, onOpenChange, onSuccess }: AddSe
           
           <Button
             type="submit"
-            disabled={loading || !formData.name_ar || !formData.city || !formData.category_id}
+            disabled={loading || !formData.name_ar || !formData.city || !formData.category_id || isUploading}
             className="w-full gold-gradient text-white py-6"
           >
             <span className="font-arabic text-lg">
