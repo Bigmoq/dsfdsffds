@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { HallManagement } from "./HallManagement";
 import { ServiceProviderManagement } from "./ServiceProviderManagement";
+import { DressSellerManagement } from "./DressSellerManagement";
 
 export function VendorDashboard() {
   const { user, role } = useAuth();
@@ -55,6 +56,21 @@ export function VendorDashboard() {
           <ArrowRight className="w-4 h-4" />
         </button>
         <ServiceProviderManagement />
+      </div>
+    );
+  }
+
+  if (activeView === "dress_seller") {
+    return (
+      <div>
+        <button
+          onClick={() => setActiveView(null)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors p-4"
+        >
+          <span className="font-arabic text-sm">العودة للوحة التحكم</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+        <DressSellerManagement />
       </div>
     );
   }
@@ -113,6 +129,7 @@ export function VendorDashboard() {
           <motion.button
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
+            onClick={() => setActiveView("dress_seller")}
             className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
           >
             <div className="w-14 h-14 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0">
