@@ -1,6 +1,11 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Settings, Bell, HelpCircle, LogOut, ChevronLeft } from "lucide-react";
+import { User, Settings, Bell, HelpCircle, LogOut, ChevronLeft, Building2, Briefcase, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { VendorApplicationSheet } from "./VendorApplicationSheet";
+import { VendorDashboard } from "./VendorDashboard";
 
 const menuItems = [
   { icon: User, label: "الملف الشخصي", labelEn: "Profile" },
@@ -10,6 +15,56 @@ const menuItems = [
 ];
 
 export function ProfileScreen() {
+  const navigate = useNavigate();
+  const { user, loading, signOut, isAuthenticated } = useAuth();
+  const [showVendorSheet, setShowVendorSheet] = useState(false);
+  const [showVendorDashboard, setShowVendorDashboard] = useState(false);
+
+  const handleLogout = async () => {
+    await signOut();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pb-24 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (showVendorDashboard && isAuthenticated) {
+    return (
+      <div className="min-h-screen pb-24">
+        <div className="gold-gradient px-4 pt-12 pb-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6bTAtMTBjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
+          
+          <button
+            onClick={() => setShowVendorDashboard(false)}
+            className="flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-4"
+          >
+            <span className="font-arabic text-sm">العودة للحساب</span>
+            <ChevronLeft className="w-4 h-4 rotate-180" />
+          </button>
+          
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center relative z-10"
+          >
+            <h1 className="font-display text-3xl font-bold text-white mb-2">
+              لوحة التحكم
+            </h1>
+            <p className="text-white/80 font-arabic text-sm">
+              إدارة خدماتك وحجوزاتك
+            </p>
+          </motion.div>
+        </div>
+        
+        <VendorDashboard />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-24">
       {/* Header */}
@@ -41,18 +96,70 @@ export function ProfileScreen() {
             <User className="w-10 h-10 text-muted-foreground" />
           </div>
           
-          <h2 className="font-display text-xl font-bold text-foreground mb-1">
-            مرحباً بك
-          </h2>
-          <p className="text-muted-foreground font-arabic text-sm mb-4">
-            سجل دخولك للاستفادة من جميع المميزات
-          </p>
-          
-          <Button className="gold-gradient text-white hover:opacity-90 w-full">
-            <span className="font-arabic">تسجيل الدخول</span>
-          </Button>
+          {isAuthenticated ? (
+            <>
+              <h2 className="font-display text-xl font-bold text-foreground mb-1">
+                {user?.user_metadata?.full_name || "مرحباً بك"}
+              </h2>
+              <p className="text-muted-foreground font-arabic text-sm mb-4">
+                {user?.email}
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="font-display text-xl font-bold text-foreground mb-1">
+                مرحباً بك
+              </h2>
+              <p className="text-muted-foreground font-arabic text-sm mb-4">
+                سجل دخولك للاستفادة من جميع المميزات
+              </p>
+              
+              <Button
+                onClick={() => navigate("/auth")}
+                className="gold-gradient text-white hover:opacity-90 w-full"
+              >
+                <span className="font-arabic">تسجيل الدخول</span>
+              </Button>
+            </>
+          )}
         </motion.div>
       </div>
+      
+      {/* Vendor Actions - Only for authenticated users */}
+      {isAuthenticated && (
+        <div className="px-4 mt-6 space-y-3">
+          <motion.button
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={() => setShowVendorDashboard(true)}
+            className="w-full card-luxe rounded-xl p-4 flex items-center justify-between hover:shadow-lg transition-shadow"
+          >
+            <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+            <div className="flex items-center gap-3">
+              <span className="font-arabic text-foreground">لوحة تحكم البائع</span>
+              <div className="w-10 h-10 rounded-full gold-gradient flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-white" />
+              </div>
+            </div>
+          </motion.button>
+          
+          <motion.button
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            onClick={() => setShowVendorSheet(true)}
+            className="w-full card-luxe rounded-xl p-4 flex items-center justify-between hover:shadow-lg transition-shadow border-2 border-dashed border-primary/30"
+          >
+            <ChevronLeft className="w-5 h-5 text-primary" />
+            <div className="flex items-center gap-3">
+              <span className="font-arabic text-primary font-semibold">انضم كمقدم خدمة</span>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Crown className="w-5 h-5 text-primary" />
+              </div>
+            </div>
+          </motion.button>
+        </div>
+      )}
       
       {/* Menu Items */}
       <div className="px-4 mt-6 space-y-3">
@@ -63,7 +170,7 @@ export function ProfileScreen() {
               key={index}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: (isAuthenticated ? 0.2 : 0) + index * 0.1 }}
               className="w-full card-luxe rounded-xl p-4 flex items-center justify-between hover:shadow-lg transition-shadow"
             >
               <ChevronLeft className="w-5 h-5 text-muted-foreground" />
@@ -78,21 +185,29 @@ export function ProfileScreen() {
         })}
         
         {/* Logout */}
-        <motion.button
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="w-full bg-destructive/10 rounded-xl p-4 flex items-center justify-between hover:bg-destructive/20 transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5 text-destructive" />
-          <div className="flex items-center gap-3">
-            <span className="font-arabic text-destructive">تسجيل الخروج</span>
-            <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
-              <LogOut className="w-5 h-5 text-destructive" />
+        {isAuthenticated && (
+          <motion.button
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            onClick={handleLogout}
+            className="w-full bg-destructive/10 rounded-xl p-4 flex items-center justify-between hover:bg-destructive/20 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-destructive" />
+            <div className="flex items-center gap-3">
+              <span className="font-arabic text-destructive">تسجيل الخروج</span>
+              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <LogOut className="w-5 h-5 text-destructive" />
+              </div>
             </div>
-          </div>
-        </motion.button>
+          </motion.button>
+        )}
       </div>
+      
+      <VendorApplicationSheet
+        open={showVendorSheet}
+        onOpenChange={setShowVendorSheet}
+      />
     </div>
   );
 }
