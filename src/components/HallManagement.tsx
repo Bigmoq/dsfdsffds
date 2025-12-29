@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Plus, MapPin, Users, Calendar, Trash2, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useBookingNotifications } from "@/hooks/useBookingNotifications";
 import { AddHallSheet } from "./AddHallSheet";
 import { HallCalendarSheet } from "./HallCalendarSheet";
 import { HallBookingManagement } from "./HallBookingManagement";
@@ -22,6 +23,19 @@ export function HallManagement() {
   const [selectedHall, setSelectedHall] = useState<Hall | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Get hall IDs for realtime notifications
+  const hallIds = halls.map(h => h.id);
+
+  // Handle new booking notification
+  const handleNewBooking = useCallback(() => {
+    fetchPendingCount();
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
+  // Subscribe to real-time booking notifications
+  useBookingNotifications({ hallIds, onNewBooking: handleNewBooking });
 
   useEffect(() => {
     if (user) {
@@ -227,7 +241,7 @@ export function HallManagement() {
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-4">
-          <HallBookingManagement />
+          <HallBookingManagement refreshKey={refreshKey} />
         </TabsContent>
       </Tabs>
       

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useBookingNotifications } from "@/hooks/useBookingNotifications";
 import type { Database } from "@/integrations/supabase/types";
 
 type Booking = Database["public"]["Tables"]["hall_bookings"]["Row"] & {
@@ -20,7 +21,11 @@ type Booking = Database["public"]["Tables"]["hall_bookings"]["Row"] & {
 
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
-export function HallBookingManagement() {
+interface HallBookingManagementProps {
+  refreshKey?: number;
+}
+
+export function HallBookingManagement({ refreshKey }: HallBookingManagementProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -33,7 +38,7 @@ export function HallBookingManagement() {
     if (user) {
       fetchBookings();
     }
-  }, [user]);
+  }, [user, refreshKey]);
 
   const fetchBookings = async () => {
     if (!user) return;
