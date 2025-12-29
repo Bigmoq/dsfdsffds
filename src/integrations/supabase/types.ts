@@ -468,7 +468,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "user" | "hall_owner" | "service_provider" | "dress_seller"
+      app_role:
+        | "user"
+        | "hall_owner"
+        | "service_provider"
+        | "dress_seller"
+        | "admin"
       availability_status: "available" | "booked" | "resale"
       booking_status: "pending" | "accepted" | "rejected" | "cancelled"
       vendor_role: "hall_owner" | "service_provider" | "dress_seller"
@@ -600,7 +605,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["user", "hall_owner", "service_provider", "dress_seller"],
+      app_role: [
+        "user",
+        "hall_owner",
+        "service_provider",
+        "dress_seller",
+        "admin",
+      ],
       availability_status: ["available", "booked", "resale"],
       booking_status: ["pending", "accepted", "rejected", "cancelled"],
       vendor_role: ["hall_owner", "service_provider", "dress_seller"],
