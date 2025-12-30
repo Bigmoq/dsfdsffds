@@ -3,6 +3,10 @@ import { MapPin, Star, Users, MessageCircle, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WeddingHall } from "@/data/weddingData";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { format, addDays } from "date-fns";
+import { ar } from "date-fns/locale";
 
 // Support both database schema and mock data schema
 interface DatabaseHall {
@@ -46,6 +50,47 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
   const rating = isDatabaseHall(hall) ? undefined : hall.rating;
 
   const isHallFavorite = isFavorite(hallId);
+
+  // Fetch next 7 days availability
+  const next7Days = Array.from({ length: 7 }, (_, i) => format(addDays(new Date(), i), 'yyyy-MM-dd'));
+  
+  const { data: availabilityData } = useQuery({
+    queryKey: ['hall-availability-preview', hallId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('hall_availability')
+        .select('date, status')
+        .eq('hall_id', hallId)
+        .in('date', next7Days);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isDatabaseHall(hall),
+  });
+
+  // Create availability map
+  const availabilityMap = new Map(
+    availabilityData?.map(item => [item.date, item.status]) || []
+  );
+
+  const getStatusColor = (status: string | undefined) => {
+    switch (status) {
+      case 'available': return 'bg-green-500';
+      case 'booked': return 'bg-red-500';
+      case 'resale': return 'bg-resale';
+      default: return 'bg-muted';
+    }
+  };
+
+  const getStatusShadow = (status: string | undefined) => {
+    switch (status) {
+      case 'available': return 'shadow-[0_0_6px_rgba(34,197,94,0.5)]';
+      case 'booked': return 'shadow-[0_0_6px_rgba(239,68,68,0.5)]';
+      case 'resale': return 'shadow-[0_0_6px_hsl(var(--resale)/0.5)]';
+      default: return '';
+    }
+  };
 
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -139,6 +184,46 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
           </div>
         </div>
         
+        {/* 7-Day Availability Preview */}
+        {isDatabaseHall(hall) && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  متاح
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  محجوز
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-resale"></span>
+                  إعادة بيع
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-between gap-1">
+              {next7Days.map((dateStr, i) => {
+                const date = addDays(new Date(), i);
+                const status = availabilityMap.get(dateStr);
+                const dayName = format(date, 'EEEEE', { locale: ar });
+                const dayNum = format(date, 'd');
+                
+                return (
+                  <div key={dateStr} className="flex flex-col items-center gap-1">
+                    <div 
+                      className={`w-6 h-6 rounded-full ${getStatusColor(status)} ${getStatusShadow(status)} transition-all`}
+                    />
+                    <span className="text-[10px] text-muted-foreground font-arabic">{dayName}</span>
+                    <span className="text-[10px] text-foreground font-semibold">{dayNum}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* WhatsApp Button */}
         {whatsappEnabled && phone && (
           <Button
