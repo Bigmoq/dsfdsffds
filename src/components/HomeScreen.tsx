@@ -1,20 +1,36 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search, SlidersHorizontal, MapPin, X } from "lucide-react";
-import { weddingHalls, cities, WeddingHall } from "@/data/weddingData";
+import { cities } from "@/data/weddingData";
 import { HallCard } from "./HallCard";
 import { HallDetailsSheet } from "./HallDetailsSheet";
 import { HallFilterSheet, HallFilters, defaultFilters } from "./HallFilterSheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export function HomeScreen() {
   const [selectedCity, setSelectedCity] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedHall, setSelectedHall] = useState<WeddingHall | null>(null);
+  const [selectedHall, setSelectedHall] = useState<any>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<HallFilters>(defaultFilters);
+
+  // Fetch halls from database
+  const { data: dbHalls = [], isLoading } = useQuery({
+    queryKey: ['halls'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('halls')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   // Count active filters (excluding defaults)
   const activeFilterCount = useMemo(() => {
@@ -28,47 +44,42 @@ export function HomeScreen() {
 
   // Filter halls based on search and filters
   const filteredHalls = useMemo(() => {
-    return weddingHalls.filter((hall) => {
+    return dbHalls.filter((hall) => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch =
-          hall.name.toLowerCase().includes(query) ||
-          hall.nameAr.includes(searchQuery) ||
+          hall.name_ar.toLowerCase().includes(query) ||
+          hall.name_ar.includes(searchQuery) ||
           hall.city.toLowerCase().includes(query) ||
-          hall.cityAr.includes(searchQuery);
+          hall.city.includes(searchQuery);
         if (!matchesSearch) return false;
       }
 
       // City filter (from tabs or filter sheet)
       const cityFilter = selectedCity !== "all" ? selectedCity : filters.city;
       if (cityFilter !== "all") {
-        if (hall.city.toLowerCase() !== cityFilter) return false;
+        // Match city in Arabic
+        const cityData = cities.find(c => c.id === cityFilter);
+        if (cityData && hall.city !== cityData.nameAr) return false;
       }
 
       // Capacity filter
-      const totalCapacity = hall.capacityMen + hall.capacityWomen;
+      const totalCapacity = hall.capacity_men + hall.capacity_women;
       if (totalCapacity < filters.minCapacity || totalCapacity > filters.maxCapacity) {
         return false;
       }
 
       // Price filter
-      if (hall.price < filters.minPrice || hall.price > filters.maxPrice) {
+      if (hall.price_weekday < filters.minPrice || hall.price_weekday > filters.maxPrice) {
         return false;
-      }
-
-      // Availability filter
-      if (filters.availability !== "all") {
-        if (!hall.availability.includes(filters.availability)) {
-          return false;
-        }
       }
 
       return true;
     });
-  }, [searchQuery, selectedCity, filters]);
+  }, [searchQuery, selectedCity, filters, dbHalls]);
 
-  const handleHallClick = (hall: WeddingHall) => {
+  const handleHallClick = (hall: any) => {
     setSelectedHall(hall);
     setSheetOpen(true);
   };
@@ -178,7 +189,11 @@ export function HomeScreen() {
           </h2>
         </div>
         
-        {filteredHalls.length > 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground font-arabic">جاري التحميل...</p>
+          </div>
+        ) : filteredHalls.length > 0 ? (
           <div className="space-y-4">
             {filteredHalls.map((hall, index) => (
               <HallCard 
