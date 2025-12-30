@@ -1,26 +1,27 @@
-import { MapPin, MessageCircle } from "lucide-react";
+import { MapPin, Sparkles, Tag, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { Dress } from "@/data/weddingData";
+import { useState } from "react";
 
 interface DressCardProps {
-  dress: Dress;
+  dress: Dress & { condition?: string };
   onClick: () => void;
 }
 
 export function DressCard({ dress, onClick }: DressCardProps) {
-  const handleWhatsApp = (e: React.MouseEvent) => {
+  const [isLiked, setIsLiked] = useState(false);
+  const isNew = dress.condition === 'new';
+
+  const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const message = encodeURIComponent(`مرحباً، أنا مهتمة بالفستان: ${dress.title}`);
-    window.open(`https://wa.me/${dress.phone}?text=${message}`, "_blank");
+    setIsLiked(!isLiked);
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
       onClick={onClick}
-      className="bg-card rounded-xl overflow-hidden shadow-lg border border-border/50 cursor-pointer group"
+      className="bg-card rounded-2xl overflow-hidden shadow-lg border border-border/30 cursor-pointer group"
     >
       <div className="relative aspect-[3/4] overflow-hidden">
         <img
@@ -28,28 +29,57 @@ export function DressCard({ dress, onClick }: DressCardProps) {
           alt={dress.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
-        <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-bold">
-          {dress.price.toLocaleString()} ر.س
+        
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+        
+        {/* Condition Badge */}
+        <div className={`absolute top-2 right-2 px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 ${
+          isNew 
+            ? "bg-emerald-500 text-white" 
+            : "bg-amber-500 text-white"
+        }`}>
+          {isNew ? <Sparkles className="w-3 h-3" /> : <Tag className="w-3 h-3" />}
+          {isNew ? "جديد" : "مستعمل"}
         </div>
+
+        {/* Like Button */}
         <button
-          onClick={handleWhatsApp}
-          className="absolute bottom-2 left-2 bg-green-500 hover:bg-green-600 text-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+          onClick={handleLikeClick}
+          className={`absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+            isLiked 
+              ? "bg-white" 
+              : "bg-black/30 backdrop-blur-sm hover:bg-white/80"
+          }`}
         >
-          <MessageCircle className="w-4 h-4" />
+          <Heart 
+            className={`w-4 h-4 transition-colors ${
+              isLiked 
+                ? "text-rose-500 fill-rose-500" 
+                : "text-white hover:text-rose-500"
+            }`} 
+          />
         </button>
+        
+        {/* Price Badge */}
+        <div className="absolute bottom-2 right-2 gold-gradient px-2.5 py-1 rounded-full shadow-lg">
+          <span className="text-xs font-bold text-white">
+            {dress.price.toLocaleString()} ر.س
+          </span>
+        </div>
       </div>
       
       <div className="p-3 space-y-2">
-        <h3 className="font-arabic font-semibold text-foreground text-sm line-clamp-1">
+        <h3 className="font-arabic font-semibold text-foreground text-sm line-clamp-1 text-right">
           {dress.title}
         </h3>
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span className="bg-secondary px-2 py-0.5 rounded-full">
-            مقاس: {dress.size}
+          <span className="bg-muted px-2 py-0.5 rounded-full font-medium">
+            {dress.size}
           </span>
           <span className="flex items-center gap-1">
-            <MapPin className="w-3 h-3" />
             {dress.city}
+            <MapPin className="w-3 h-3" />
           </span>
         </div>
       </div>

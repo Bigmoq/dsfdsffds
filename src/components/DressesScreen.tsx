@@ -1,40 +1,96 @@
-import { useState } from "react";
-import { Plus, Search, SlidersHorizontal } from "lucide-react";
-import { motion } from "framer-motion";
+import { useState, useMemo } from "react";
+import { Plus, Search, SlidersHorizontal, Sparkles, Tag } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { DressCard } from "./DressCard";
 import { DressDetailsSheet } from "./DressDetailsSheet";
 import { SellDressSheet } from "./SellDressSheet";
 import { DressFilterSheet, DressFilters } from "./DressFilterSheet";
-import { mockDresses, Dress } from "@/data/weddingData";
+import { mockDresses, Dress, saudiCities } from "@/data/weddingData";
+import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+type ConditionTab = "all" | "new" | "used";
 
 export function DressesScreen() {
-  const [selectedDress, setSelectedDress] = useState<Dress | null>(null);
+  const [selectedDress, setSelectedDress] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showSellSheet, setShowSellSheet] = useState(false);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCondition, setSelectedCondition] = useState<ConditionTab>("all");
+  const [selectedCity, setSelectedCity] = useState<string>("all");
   const [filters, setFilters] = useState<DressFilters>({
     city: "",
     size: "",
     priceRange: [0, 10000]
   });
 
-  const filteredDresses = mockDresses.filter((dress) => {
-    // Search filter
-    const matchesSearch = dress.title.includes(searchQuery) || dress.city.includes(searchQuery);
-    
-    // City filter
-    const matchesCity = !filters.city || dress.city === filters.city;
-    
-    // Size filter
-    const matchesSize = !filters.size || dress.size === filters.size;
-    
-    // Price filter
-    const matchesPrice = dress.price >= filters.priceRange[0] && dress.price <= filters.priceRange[1];
-    
-    return matchesSearch && matchesCity && matchesSize && matchesPrice;
+  // Fetch dresses from database
+  const { data: dbDresses = [], isLoading } = useQuery({
+    queryKey: ['dresses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('dresses')
+        .select('*')
+        .eq('is_active', true)
+        .eq('is_sold', false)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
   });
+
+  // Combine mock and database dresses for now
+  const allDresses = useMemo(() => {
+    const dbDressesNormalized = dbDresses.map(d => ({
+      id: d.id,
+      title: d.title,
+      price: d.price,
+      size: d.size,
+      city: d.city,
+      images: d.images || [],
+      phone: '',
+      condition: d.condition || 'used',
+      description: d.description,
+      isFromDb: true,
+    }));
+    
+    // Add condition to mock dresses
+    const mockDressesWithCondition = mockDresses.map(d => ({
+      ...d,
+      condition: Math.random() > 0.5 ? 'new' : 'used',
+      isFromDb: false,
+    }));
+    
+    return [...dbDressesNormalized, ...mockDressesWithCondition];
+  }, [dbDresses]);
+
+  const filteredDresses = useMemo(() => {
+    return allDresses.filter((dress) => {
+      // Search filter
+      const matchesSearch = dress.title.includes(searchQuery) || dress.city.includes(searchQuery);
+      
+      // Condition filter
+      const matchesCondition = selectedCondition === "all" || dress.condition === selectedCondition;
+      
+      // City filter (from quick tabs)
+      const matchesQuickCity = selectedCity === "all" || dress.city === selectedCity;
+      
+      // City filter (from filter sheet)
+      const matchesFilterCity = !filters.city || dress.city === filters.city;
+      
+      // Size filter
+      const matchesSize = !filters.size || dress.size === filters.size;
+      
+      // Price filter
+      const matchesPrice = dress.price >= filters.priceRange[0] && dress.price <= filters.priceRange[1];
+      
+      return matchesSearch && matchesCondition && matchesQuickCity && matchesFilterCity && matchesSize && matchesPrice;
+    });
+  }, [allDresses, searchQuery, selectedCondition, selectedCity, filters]);
 
   const activeFiltersCount = [
     filters.city,
@@ -42,15 +98,23 @@ export function DressesScreen() {
     filters.priceRange[0] > 0 || filters.priceRange[1] < 10000
   ].filter(Boolean).length;
 
-  const handleDressClick = (dress: Dress) => {
+  const handleDressClick = (dress: any) => {
     setSelectedDress(dress);
     setShowDetails(true);
   };
 
+  const conditionTabs: { id: ConditionTab; label: string; icon: any }[] = [
+    { id: "all", label: "الكل", icon: null },
+    { id: "new", label: "جديد", icon: Sparkles },
+    { id: "used", label: "مستعمل", icon: Tag },
+  ];
+
+  const quickCities = ["all", "الرياض", "جدة", "مكة المكرمة", "الدمام"];
+
   return (
     <div className="min-h-screen bg-background pb-32">
       {/* Header */}
-      <div className="bg-gradient-to-b from-primary/10 to-background pt-12 pb-6 px-4">
+      <div className="bg-gradient-to-b from-pink-500/10 via-primary/5 to-background pt-12 pb-6 px-4">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -65,7 +129,7 @@ export function DressesScreen() {
         </motion.div>
 
         {/* Search Bar */}
-        <div className="relative max-w-md mx-auto">
+        <div className="relative max-w-md mx-auto mb-4">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
             placeholder="ابحثي عن فستان..."
@@ -85,24 +149,93 @@ export function DressesScreen() {
             )}
           </button>
         </div>
-      </div>
 
-      {/* Dresses Grid */}
-      <div className="px-4 py-4">
-        <div className="grid grid-cols-2 gap-4">
-          {filteredDresses.map((dress) => (
-            <DressCard
-              key={dress.id}
-              dress={dress}
-              onClick={() => handleDressClick(dress)}
-            />
+        {/* Condition Tabs */}
+        <div className="flex justify-center gap-2 mb-4">
+          {conditionTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedCondition(tab.id)}
+              className={`px-4 py-2 rounded-full text-sm font-arabic flex items-center gap-1.5 transition-all ${
+                selectedCondition === tab.id
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "bg-card text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
+              {tab.label}
+            </button>
           ))}
         </div>
 
-        {filteredDresses.length === 0 && (
+        {/* Quick City Filter */}
+        <div className="flex gap-2 overflow-x-auto pb-2 px-1 scrollbar-hide">
+          {quickCities.map((city) => (
+            <button
+              key={city}
+              onClick={() => setSelectedCity(city)}
+              className={`px-3 py-1.5 rounded-full text-xs font-arabic whitespace-nowrap transition-all ${
+                selectedCity === city
+                  ? "bg-foreground text-background"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {city === "all" ? "كل المدن" : city}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Results Count */}
+      <div className="px-4 py-3 flex items-center justify-between">
+        <Badge variant="secondary" className="font-arabic">
+          {filteredDresses.length} فستان
+        </Badge>
+        <span className="text-sm text-muted-foreground font-arabic">
+          {selectedCondition === "new" ? "فساتين جديدة" : 
+           selectedCondition === "used" ? "فساتين مستعملة" : "جميع الفساتين"}
+        </span>
+      </div>
+
+      {/* Dresses Grid */}
+      <div className="px-4">
+        {isLoading ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground font-arabic">
+            <p className="text-muted-foreground font-arabic">جاري التحميل...</p>
+          </div>
+        ) : filteredDresses.length > 0 ? (
+          <motion.div 
+            className="grid grid-cols-2 gap-4"
+            layout
+          >
+            <AnimatePresence mode="popLayout">
+              {filteredDresses.map((dress) => (
+                <motion.div
+                  key={dress.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <DressCard
+                    dress={dress as any}
+                    onClick={() => handleDressClick(dress)}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+              <Search className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground font-arabic mb-2">
               لا توجد نتائج للبحث
+            </p>
+            <p className="text-sm text-muted-foreground/70 font-arabic">
+              جربي تغيير معايير البحث
             </p>
           </div>
         )}
@@ -115,7 +248,7 @@ export function DressesScreen() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setShowSellSheet(true)}
-        className="fixed bottom-28 left-4 bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-2xl flex items-center justify-center z-40"
+        className="fixed bottom-28 left-4 gold-gradient text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center z-40"
       >
         <Plus className="w-7 h-7" />
       </motion.button>
