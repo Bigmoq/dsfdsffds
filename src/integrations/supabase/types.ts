@@ -168,6 +168,54 @@ export type Database = {
           },
         ]
       }
+      hall_reviews: {
+        Row: {
+          booking_id: string | null
+          comment: string | null
+          created_at: string
+          hall_id: string
+          id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          comment?: string | null
+          created_at?: string
+          hall_id: string
+          id?: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          comment?: string | null
+          created_at?: string
+          hall_id?: string
+          id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hall_reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "hall_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hall_reviews_hall_id_fkey"
+            columns: ["hall_id"]
+            isOneToOne: false
+            referencedRelation: "halls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       halls: {
         Row: {
           address: string | null
@@ -461,6 +509,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_hall_rating: {
+        Args: { hall_uuid: string }
+        Returns: {
+          average_rating: number
+          reviews_count: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
