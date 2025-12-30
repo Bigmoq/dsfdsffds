@@ -396,6 +396,41 @@ export type Database = {
           },
         ]
       }
+      service_provider_availability: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          provider_id: string
+          status: Database["public"]["Enums"]["service_availability_status"]
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          notes?: string | null
+          provider_id: string
+          status?: Database["public"]["Enums"]["service_availability_status"]
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          provider_id?: string
+          status?: Database["public"]["Enums"]["service_availability_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_provider_availability_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_providers: {
         Row: {
           category_id: string
@@ -566,6 +601,7 @@ export type Database = {
         | "admin"
       availability_status: "available" | "booked" | "resale"
       booking_status: "pending" | "accepted" | "rejected" | "cancelled"
+      service_availability_status: "available" | "booked" | "unavailable"
       vendor_role: "hall_owner" | "service_provider" | "dress_seller"
       vendor_status: "pending" | "approved" | "rejected"
     }
@@ -704,6 +740,7 @@ export const Constants = {
       ],
       availability_status: ["available", "booked", "resale"],
       booking_status: ["pending", "accepted", "rejected", "cancelled"],
+      service_availability_status: ["available", "booked", "unavailable"],
       vendor_role: ["hall_owner", "service_provider", "dress_seller"],
       vendor_status: ["pending", "approved", "rejected"],
     },
