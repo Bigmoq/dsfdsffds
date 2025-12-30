@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Upload, Loader2, ImageIcon } from "lucide-react";
+import { X, Upload, Loader2, ImageIcon, Phone } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -38,9 +39,11 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
     capacity_women: "",
     price_weekday: "",
     price_weekend: "",
+    phone: "",
+    whatsapp_enabled: true,
   });
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -182,6 +185,8 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
       capacity_women: "",
       price_weekday: "",
       price_weekend: "",
+      phone: "",
+      whatsapp_enabled: true,
     });
     setCoverImage(null);
     setGalleryImages([]);
@@ -208,6 +213,8 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
         price_weekend: parseInt(formData.price_weekend) || 0,
         cover_image: coverImage,
         gallery_images: galleryImages.length > 0 ? galleryImages : null,
+        phone: formData.phone || null,
+        whatsapp_enabled: formData.whatsapp_enabled,
       });
       
       if (error) throw error;
@@ -440,6 +447,33 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
                 required
               />
             </div>
+          </div>
+
+          {/* Phone and WhatsApp */}
+          <div className="space-y-2">
+            <Label className="font-arabic flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              رقم الهاتف (واتساب)
+            </Label>
+            <Input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => handleChange("phone", e.target.value)}
+              placeholder="966512345678"
+              dir="ltr"
+              className="text-left"
+            />
+            <p className="text-xs text-muted-foreground font-arabic">
+              أدخل الرقم مع رمز الدولة (مثال: 966512345678)
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between py-2">
+            <Label className="font-arabic">تفعيل التواصل عبر واتساب</Label>
+            <Switch
+              checked={formData.whatsapp_enabled}
+              onCheckedChange={(checked) => handleChange("whatsapp_enabled", checked.toString())}
+            />
           </div>
           
           <Button

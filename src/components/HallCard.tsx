@@ -1,17 +1,53 @@
 import { motion } from "framer-motion";
-import { MapPin, Star, Users } from "lucide-react";
+import { MapPin, Star, Users, MessageCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { WeddingHall } from "@/data/weddingData";
 
+// Support both database schema and mock data schema
+interface DatabaseHall {
+  id: string;
+  name_ar: string;
+  city: string;
+  cover_image?: string | null;
+  price_weekday: number;
+  capacity_men: number;
+  capacity_women: number;
+  phone?: string | null;
+  whatsapp_enabled?: boolean | null;
+}
+
+type HallData = WeddingHall | DatabaseHall;
+
 interface HallCardProps {
-  hall: WeddingHall;
+  hall: HallData;
   index: number;
   onClick?: () => void;
 }
 
+// Type guards to check which schema we're dealing with
+function isDatabaseHall(hall: HallData): hall is DatabaseHall {
+  return 'name_ar' in hall;
+}
+
 export function HallCard({ hall, index, onClick }: HallCardProps) {
-  const getDayLabel = (idx: number) => {
-    const days = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
-    return days[idx];
+  // Normalize data for both schemas
+  const hallName = isDatabaseHall(hall) ? hall.name_ar : hall.nameAr;
+  const hallCity = isDatabaseHall(hall) ? hall.city : hall.cityAr;
+  const hallImage = isDatabaseHall(hall) ? (hall.cover_image || '/placeholder.svg') : hall.image;
+  const hallPrice = isDatabaseHall(hall) ? hall.price_weekday : hall.price;
+  const capacityMen = isDatabaseHall(hall) ? hall.capacity_men : hall.capacityMen;
+  const capacityWomen = isDatabaseHall(hall) ? hall.capacity_women : hall.capacityWomen;
+  const phone = isDatabaseHall(hall) ? hall.phone : undefined;
+  const whatsappEnabled = isDatabaseHall(hall) ? hall.whatsapp_enabled : false;
+  const rating = isDatabaseHall(hall) ? undefined : hall.rating;
+
+  const handleWhatsAppClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (phone) {
+      const cleanPhone = phone.replace(/\D/g, '');
+      const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن قاعة ${hallName}`);
+      window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+    }
   };
 
   return (
@@ -25,8 +61,8 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
       {/* Image Section */}
       <div className="relative h-48 overflow-hidden">
         <img 
-          src={hall.image} 
-          alt={hall.nameAr}
+          src={hallImage} 
+          alt={hallName}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -34,23 +70,25 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
         {/* Price Badge */}
         <div className="absolute top-3 left-3 gold-gradient px-3 py-1.5 rounded-full shadow-lg">
           <span className="text-sm font-bold text-white">
-            SAR {hall.price.toLocaleString()}
+            SAR {hallPrice.toLocaleString()}
           </span>
         </div>
         
-        {/* Rating */}
-        <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1">
-          <Star className="w-4 h-4 text-resale fill-resale" />
-          <span className="text-sm font-semibold text-white">{hall.rating}</span>
-        </div>
+        {/* Rating (only for mock data) */}
+        {rating && (
+          <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1">
+            <Star className="w-4 h-4 text-resale fill-resale" />
+            <span className="text-sm font-semibold text-white">{rating}</span>
+          </div>
+        )}
         
         {/* Hall Name Overlay */}
         <div className="absolute bottom-3 left-3 right-3">
           <h3 className="font-display text-xl font-bold text-white mb-1 text-right">
-            {hall.nameAr}
+            {hallName}
           </h3>
           <div className="flex items-center gap-1 justify-end text-white/90">
-            <span className="text-sm">{hall.cityAr}</span>
+            <span className="text-sm">{hallCity}</span>
             <MapPin className="w-4 h-4" />
           </div>
         </div>
@@ -62,53 +100,26 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="font-arabic">رجال {hall.capacityMen}</span>
+              <span className="font-arabic">رجال {capacityMen}</span>
               <Users className="w-4 h-4" />
             </div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="font-arabic">نساء {hall.capacityWomen}</span>
+              <span className="font-arabic">نساء {capacityWomen}</span>
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <span className="text-xs text-muted-foreground">({hall.reviews} تقييم)</span>
         </div>
         
-        {/* Availability Strip */}
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground text-right font-arabic">
-            الأيام المتاحة
-          </p>
-          <div className="flex items-center justify-between gap-1">
-            {hall.availability.map((status, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-1">
-                <div className={`availability-dot ${
-                  status === 'available' ? 'availability-available' :
-                  status === 'booked' ? 'availability-booked' :
-                  'availability-resale'
-                }`} />
-                <span className="text-[10px] text-muted-foreground font-arabic">
-                  {getDayLabel(idx)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Legend */}
-        <div className="flex items-center justify-center gap-4 pt-2 border-t border-border/50">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-available" />
-            <span className="text-xs text-muted-foreground font-arabic">متاح</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-booked" />
-            <span className="text-xs text-muted-foreground font-arabic">محجوز</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-resale" />
-            <span className="text-xs text-muted-foreground font-arabic">إعادة بيع</span>
-          </div>
-        </div>
+        {/* WhatsApp Button */}
+        {whatsappEnabled && phone && (
+          <Button
+            onClick={handleWhatsAppClick}
+            className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white gap-2"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span className="font-arabic">تواصل عبر واتساب</span>
+          </Button>
+        )}
       </div>
     </motion.div>
   );
