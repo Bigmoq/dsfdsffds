@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { MapPin, Star, Users, MessageCircle } from "lucide-react";
+import { MapPin, Star, Users, MessageCircle, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WeddingHall } from "@/data/weddingData";
+import { useFavorites } from "@/hooks/useFavorites";
 
 // Support both database schema and mock data schema
 interface DatabaseHall {
@@ -30,7 +31,10 @@ function isDatabaseHall(hall: HallData): hall is DatabaseHall {
 }
 
 export function HallCard({ hall, index, onClick }: HallCardProps) {
+  const { isFavorite, toggleFavorite } = useFavorites();
+  
   // Normalize data for both schemas
+  const hallId = hall.id;
   const hallName = isDatabaseHall(hall) ? hall.name_ar : hall.nameAr;
   const hallCity = isDatabaseHall(hall) ? hall.city : hall.cityAr;
   const hallImage = isDatabaseHall(hall) ? (hall.cover_image || '/placeholder.svg') : hall.image;
@@ -41,6 +45,8 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
   const whatsappEnabled = isDatabaseHall(hall) ? hall.whatsapp_enabled : false;
   const rating = isDatabaseHall(hall) ? undefined : hall.rating;
 
+  const isHallFavorite = isFavorite(hallId);
+
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (phone) {
@@ -48,6 +54,11 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
       const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن قاعة ${hallName}`);
       window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
     }
+  };
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavorite(hallId);
   };
 
   return (
@@ -73,10 +84,28 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
             SAR {hallPrice.toLocaleString()}
           </span>
         </div>
+
+        {/* Favorite Button */}
+        <button
+          onClick={handleFavoriteClick}
+          className={`absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all ${
+            isHallFavorite 
+              ? "bg-white" 
+              : "bg-black/40 backdrop-blur-sm hover:bg-white/90"
+          }`}
+        >
+          <Heart 
+            className={`w-5 h-5 transition-colors ${
+              isHallFavorite 
+                ? "text-red-500 fill-red-500" 
+                : "text-white hover:text-red-500"
+            }`} 
+          />
+        </button>
         
         {/* Rating (only for mock data) */}
         {rating && (
-          <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1">
+          <div className="absolute top-14 right-3 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1">
             <Star className="w-4 h-4 text-resale fill-resale" />
             <span className="text-sm font-semibold text-white">{rating}</span>
           </div>
