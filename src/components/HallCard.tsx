@@ -75,7 +75,7 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
     switch (status) {
       case 'available': return 'bg-emerald-500';
       case 'booked': return 'bg-rose-500';
-      case 'resale': return 'bg-amber-500';
+      case 'resale': return 'bg-amber-400';
       default: return 'bg-muted-foreground/30';
     }
   };
@@ -148,38 +148,60 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
       </div>
       
       {/* Details Section */}
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-4">
         {/* Capacity */}
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="font-arabic">رجال {capacityMen}</span>
-              <Users className="w-4 h-4" />
-            </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="font-arabic">نساء {capacityWomen}</span>
-              <Users className="w-4 h-4" />
-            </div>
+        <div className="flex items-center justify-end gap-6 text-sm">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <span className="font-arabic">رجال {capacityMen}</span>
+            <Users className="w-4 h-4" />
+          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <span className="font-arabic">نساء {capacityWomen}</span>
+            <Users className="w-4 h-4" />
           </div>
         </div>
         
-        {/* 7-Day Availability Preview - Simple dots design */}
+        {/* 7-Day Availability Preview */}
         {isDatabaseHall(hall) && (
-          <div className="flex items-center justify-between pt-2 border-t border-border/50">
-            <div className="flex items-center gap-1.5">
+          <div className="space-y-3 pt-3 border-t border-border/50">
+            {/* Title */}
+            <h4 className="text-sm font-semibold text-foreground text-right font-arabic">
+              الأيام المتاحة
+            </h4>
+            
+            {/* Days with dots */}
+            <div className="flex items-center justify-between" dir="rtl">
               {next7Days.map((dateStr, i) => {
+                const date = addDays(new Date(), i);
                 const status = availabilityMap.get(dateStr);
+                const dayName = format(date, 'EEEE', { locale: ar });
                 
                 return (
-                  <div 
-                    key={dateStr}
-                    className={`w-3 h-3 rounded-full ${getStatusColor(status)} transition-all`}
-                    title={format(addDays(new Date(), i), 'EEEE d MMMM', { locale: ar })}
-                  />
+                  <div key={dateStr} className="flex flex-col items-center gap-2">
+                    <div 
+                      className={`w-3.5 h-3.5 rounded-full ${getStatusColor(status)} transition-all`}
+                    />
+                    <span className="text-[11px] text-muted-foreground font-arabic">{dayName}</span>
+                  </div>
                 );
               })}
             </div>
-            <span className="text-xs text-muted-foreground font-arabic">توفر ٧ أيام</span>
+
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-4 pt-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground font-arabic">متاح</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground font-arabic">محجوز</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground font-arabic">إعادة بيع</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+              </div>
+            </div>
           </div>
         )}
       </div>
