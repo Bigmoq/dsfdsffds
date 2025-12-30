@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
-import { MapPin, Star, Users, MessageCircle, Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MapPin, Star, Users, Heart } from "lucide-react";
 import { WeddingHall } from "@/data/weddingData";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useQuery } from "@tanstack/react-query";
@@ -45,8 +44,6 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
   const hallPrice = isDatabaseHall(hall) ? hall.price_weekday : hall.price;
   const capacityMen = isDatabaseHall(hall) ? hall.capacity_men : hall.capacityMen;
   const capacityWomen = isDatabaseHall(hall) ? hall.capacity_women : hall.capacityWomen;
-  const phone = isDatabaseHall(hall) ? hall.phone : undefined;
-  const whatsappEnabled = isDatabaseHall(hall) ? hall.whatsapp_enabled : false;
   const rating = isDatabaseHall(hall) ? undefined : hall.rating;
 
   const isHallFavorite = isFavorite(hallId);
@@ -76,28 +73,10 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
 
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
-      case 'available': return 'bg-green-500';
-      case 'booked': return 'bg-red-500';
-      case 'resale': return 'bg-resale';
-      default: return 'bg-muted';
-    }
-  };
-
-  const getStatusShadow = (status: string | undefined) => {
-    switch (status) {
-      case 'available': return 'shadow-[0_0_6px_rgba(34,197,94,0.5)]';
-      case 'booked': return 'shadow-[0_0_6px_rgba(239,68,68,0.5)]';
-      case 'resale': return 'shadow-[0_0_6px_hsl(var(--resale)/0.5)]';
-      default: return '';
-    }
-  };
-
-  const handleWhatsAppClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (phone) {
-      const cleanPhone = phone.replace(/\D/g, '');
-      const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن قاعة ${hallName}`);
-      window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+      case 'available': return 'bg-emerald-500';
+      case 'booked': return 'bg-rose-500';
+      case 'resale': return 'bg-amber-500';
+      default: return 'bg-muted-foreground/30';
     }
   };
 
@@ -169,7 +148,7 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
       </div>
       
       {/* Details Section */}
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-3">
         {/* Capacity */}
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
@@ -184,55 +163,24 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
           </div>
         </div>
         
-        {/* 7-Day Availability Preview */}
+        {/* 7-Day Availability Preview - Simple dots design */}
         {isDatabaseHall(hall) && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                  متاح
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                  محجوز
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-resale"></span>
-                  إعادة بيع
-                </span>
-              </div>
-            </div>
-            <div className="flex justify-between gap-1">
+          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+            <div className="flex items-center gap-1.5">
               {next7Days.map((dateStr, i) => {
-                const date = addDays(new Date(), i);
                 const status = availabilityMap.get(dateStr);
-                const dayName = format(date, 'EEEEE', { locale: ar });
-                const dayNum = format(date, 'd');
                 
                 return (
-                  <div key={dateStr} className="flex flex-col items-center gap-1">
-                    <div 
-                      className={`w-6 h-6 rounded-full ${getStatusColor(status)} ${getStatusShadow(status)} transition-all`}
-                    />
-                    <span className="text-[10px] text-muted-foreground font-arabic">{dayName}</span>
-                    <span className="text-[10px] text-foreground font-semibold">{dayNum}</span>
-                  </div>
+                  <div 
+                    key={dateStr}
+                    className={`w-3 h-3 rounded-full ${getStatusColor(status)} transition-all`}
+                    title={format(addDays(new Date(), i), 'EEEE d MMMM', { locale: ar })}
+                  />
                 );
               })}
             </div>
+            <span className="text-xs text-muted-foreground font-arabic">توفر ٧ أيام</span>
           </div>
-        )}
-
-        {/* WhatsApp Button */}
-        {whatsappEnabled && phone && (
-          <Button
-            onClick={handleWhatsAppClick}
-            className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white gap-2"
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span className="font-arabic">تواصل عبر واتساب</span>
-          </Button>
         )}
       </div>
     </motion.div>
