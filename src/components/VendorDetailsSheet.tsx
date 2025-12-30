@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, isSameDay, startOfToday } from "date-fns";
 import { ar } from "date-fns/locale";
+import { VendorReviews } from "./VendorReviews";
 
 interface ServicePackage {
   id: string;
@@ -371,6 +372,11 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
                 </div>
               </>
             )}
+
+            <Separator />
+
+            {/* Reviews Section */}
+            <VendorReviews providerId={vendor.id} providerName={vendor.nameAr} />
 
             {/* Contact Buttons */}
             <div className="flex gap-3 pt-4 pb-8">
