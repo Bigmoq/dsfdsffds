@@ -431,6 +431,44 @@ export type Database = {
           },
         ]
       }
+      service_provider_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          provider_id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          provider_id: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          provider_id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_provider_reviews_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_providers: {
         Row: {
           category_id: string
@@ -575,6 +613,13 @@ export type Database = {
     Functions: {
       get_hall_rating: {
         Args: { hall_uuid: string }
+        Returns: {
+          average_rating: number
+          reviews_count: number
+        }[]
+      }
+      get_service_provider_rating: {
+        Args: { provider_uuid: string }
         Returns: {
           average_rating: number
           reviews_count: number
