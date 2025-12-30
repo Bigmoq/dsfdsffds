@@ -12,6 +12,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { WeddingHall } from "@/data/weddingData";
+import { HallReviews } from "./HallReviews";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -193,6 +194,12 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
           <span className="font-arabic">تواصل عبر واتساب</span>
         </Button>
       )}
+
+      {/* Reviews Section */}
+      <div className="space-y-2">
+        <h4 className="font-semibold text-foreground text-right">التقييمات</h4>
+        <HallReviews hallId={hall.id} hallName={hall.nameAr} />
+      </div>
 
       <Button 
         className="w-full gold-gradient text-white"
