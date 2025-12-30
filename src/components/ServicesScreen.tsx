@@ -1,13 +1,17 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Search, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Search, Sparkles, Users, SlidersHorizontal } from "lucide-react";
 import { womenCategories, menCategories, vendors, ServiceCategory } from "@/data/weddingData";
 import { CategoryCard } from "./CategoryCard";
 import { VendorCard } from "./VendorCard";
+import { VendorDetailsSheet } from "./VendorDetailsSheet";
+import { VendorFilterSheet, VendorFilters, defaultFilters } from "./VendorFilterSheet";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { format, startOfToday } from "date-fns";
 
 type Tab = "women" | "men";
 
@@ -15,15 +19,24 @@ export function ServicesScreen() {
   const [activeTab, setActiveTab] = useState<Tab>("women");
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<VendorFilters>(defaultFilters);
 
-  // Fetch service providers from database
+  // Fetch service providers with packages and availability
   const { data: dbProviders = [], isLoading } = useQuery({
     queryKey: ['service-providers', selectedCategory?.id],
     queryFn: async () => {
       if (!selectedCategory) return [];
+      const today = format(startOfToday(), 'yyyy-MM-dd');
+      
       const { data, error } = await supabase
         .from('service_providers')
-        .select('*, service_packages(*)')
+        .select(`
+          *,
+          service_packages(*),
+          service_provider_availability(*)
+        `)
         .eq('category_id', selectedCategory.id)
         .eq('is_active', true);
       
@@ -41,35 +54,85 @@ export function ServicesScreen() {
     );
   }, [categories, searchQuery]);
 
-  // Combine mock and database vendors
+  // Get unique cities for filter
+  const availableCities = useMemo(() => {
+    const cities = new Set(dbProviders.map(p => p.city).filter(Boolean));
+    return Array.from(cities) as string[];
+  }, [dbProviders]);
+
+  // Process and filter vendors
   const allVendors = useMemo(() => {
-    const mockVendors = selectedCategory 
-      ? vendors.filter(v => v.categoryId === selectedCategory.id)
-      : [];
+    const today = format(startOfToday(), 'yyyy-MM-dd');
     
-    const normalizedDbProviders = dbProviders.map(p => ({
-      id: p.id,
-      name: p.name_en || p.name_ar,
-      nameAr: p.name_ar,
-      categoryId: p.category_id,
-      rating: Number(p.rating) || 0,
-      reviews: p.reviews_count || 0,
-      price: p.service_packages?.[0]?.price ? `${p.service_packages[0].price} ر.س` : 'اتصل للسعر',
-      image: p.portfolio_images?.[0] || '/placeholder.svg',
-      description: p.description || '',
-      descriptionAr: p.description || '',
-      city: p.city,
-      phone: p.phone,
-      isFromDb: true,
-    }));
-    
-    return [...normalizedDbProviders, ...mockVendors];
-  }, [selectedCategory, dbProviders]);
+    const normalizedDbProviders = dbProviders.map(p => {
+      const todayAvailability = p.service_provider_availability?.find(
+        (a: any) => a.date === today
+      );
+      const minPackagePrice = p.service_packages?.length > 0
+        ? Math.min(...p.service_packages.map((pkg: any) => pkg.price))
+        : null;
+
+      return {
+        id: p.id,
+        name: p.name_en || p.name_ar,
+        nameAr: p.name_ar,
+        categoryId: p.category_id,
+        rating: Number(p.rating) || 0,
+        reviews: p.reviews_count || 0,
+        price: minPackagePrice ? `${minPackagePrice} ر.س` : 'اتصل للسعر',
+        minPrice: minPackagePrice,
+        image: p.portfolio_images?.[0] || '/placeholder.svg',
+        portfolio_images: p.portfolio_images,
+        description: p.description || '',
+        descriptionAr: p.description || '',
+        city: p.city,
+        phone: p.phone,
+        packagesCount: p.service_packages?.length || 0,
+        isAvailableToday: todayAvailability?.status === 'available',
+        isFromDb: true,
+      };
+    });
+
+    // Apply filters
+    let filtered = normalizedDbProviders.filter(v => {
+      if (filters.city && v.city !== filters.city) return false;
+      if (filters.minRating > 0 && v.rating < filters.minRating) return false;
+      if (v.minPrice) {
+        if (v.minPrice < filters.priceRange[0] || v.minPrice > filters.priceRange[1]) return false;
+      }
+      if (filters.availableToday && !v.isAvailableToday) return false;
+      if (searchQuery && !v.nameAr.includes(searchQuery) && !v.descriptionAr?.includes(searchQuery)) return false;
+      return true;
+    });
+
+    // Sort
+    switch (filters.sortBy) {
+      case 'rating':
+        filtered.sort((a, b) => b.rating - a.rating);
+        break;
+      case 'price_low':
+        filtered.sort((a, b) => (a.minPrice || 0) - (b.minPrice || 0));
+        break;
+      case 'price_high':
+        filtered.sort((a, b) => (b.minPrice || 0) - (a.minPrice || 0));
+        break;
+    }
+
+    return filtered;
+  }, [dbProviders, filters, searchQuery]);
 
   const handleBack = () => {
     setSelectedCategory(null);
     setSearchQuery("");
+    setFilters(defaultFilters);
   };
+
+  const activeFiltersCount = [
+    filters.city,
+    filters.minRating > 0,
+    filters.priceRange[0] > 0 || filters.priceRange[1] < 50000,
+    filters.availableToday,
+  ].filter(Boolean).length;
 
   const tabOptions = [
     { id: "women" as Tab, label: "خدمات النساء", icon: Sparkles, emoji: "👩" },
@@ -97,9 +160,6 @@ export function ServicesScreen() {
               <h1 className="font-display text-2xl font-bold text-foreground mb-1">
                 {selectedCategory.nameAr}
               </h1>
-              <p className="text-muted-foreground font-arabic text-sm">
-                اختر من أفضل مقدمي الخدمة
-              </p>
             </>
           ) : (
             <>
@@ -113,18 +173,35 @@ export function ServicesScreen() {
           )}
         </motion.div>
         
-        {/* Search Bar */}
-        <div className="relative max-w-md mx-auto mb-4">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder={selectedCategory ? "ابحث عن مقدم خدمة..." : "ابحث عن خدمة..."}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-10 py-5 rounded-xl bg-card border-border/50 text-right"
-          />
+        {/* Search & Filter Bar */}
+        <div className="flex gap-2 max-w-md mx-auto mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder={selectedCategory ? "ابحث عن مقدم خدمة..." : "ابحث عن خدمة..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-10 py-5 rounded-xl bg-card border-border/50 text-right"
+            />
+          </div>
+          {selectedCategory && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowFilters(true)}
+              className="h-12 w-12 rounded-xl relative"
+            >
+              <SlidersHorizontal className="w-5 h-5" />
+              {activeFiltersCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </Button>
+          )}
         </div>
 
-        {/* Tabs - Only show when not viewing category */}
+        {/* Tabs */}
         {!selectedCategory && (
           <div className="flex justify-center gap-2">
             {tabOptions.map((tab) => (
@@ -147,7 +224,6 @@ export function ServicesScreen() {
       
       <AnimatePresence mode="wait">
         {selectedCategory ? (
-          /* Vendors List */
           <motion.div
             key="vendors"
             initial={{ opacity: 0, x: 100 }}
@@ -155,14 +231,10 @@ export function ServicesScreen() {
             exit={{ opacity: 0, x: -100 }}
             className="px-4 py-4"
           >
-            {/* Results Count */}
             <div className="flex items-center justify-between mb-4">
               <Badge variant="secondary" className="font-arabic">
                 {allVendors.length} مقدم خدمة
               </Badge>
-              <span className="text-sm text-muted-foreground font-arabic">
-                {selectedCategory.nameAr}
-              </span>
             </div>
 
             {isLoading ? (
@@ -172,7 +244,12 @@ export function ServicesScreen() {
             ) : allVendors.length > 0 ? (
               <div className="space-y-4">
                 {allVendors.map((vendor, index) => (
-                  <VendorCard key={vendor.id} vendor={vendor as any} index={index} />
+                  <VendorCard 
+                    key={vendor.id} 
+                    vendor={vendor as any} 
+                    index={index}
+                    onClick={() => setSelectedVendor(vendor)}
+                  />
                 ))}
               </div>
             ) : (
@@ -181,16 +258,15 @@ export function ServicesScreen() {
                   <span className="text-4xl">🔜</span>
                 </div>
                 <h3 className="font-display text-xl font-bold text-foreground mb-2">
-                  قريباً
+                  لا توجد نتائج
                 </h3>
                 <p className="text-muted-foreground font-arabic text-sm">
-                  لا يوجد مقدمي خدمة حالياً في هذه الفئة
+                  جرب تغيير الفلاتر أو البحث بكلمات مختلفة
                 </p>
               </div>
             )}
           </motion.div>
         ) : (
-          /* Categories Grid */
           <motion.div
             key="categories"
             initial={{ opacity: 0 }}
@@ -198,21 +274,13 @@ export function ServicesScreen() {
             exit={{ opacity: 0 }}
             className="px-4 py-4"
           >
-            {/* Categories Count */}
             <div className="flex items-center justify-between mb-4">
               <Badge variant="secondary" className="font-arabic">
                 {filteredCategories.length} خدمة
               </Badge>
-              <span className="text-sm text-muted-foreground font-arabic">
-                {activeTab === "women" ? "خدمات النساء" : "خدمات الرجال"}
-              </span>
             </div>
             
-            {/* Grid */}
-            <motion.div 
-              className="grid grid-cols-3 sm:grid-cols-4 gap-3"
-              layout
-            >
+            <motion.div className="grid grid-cols-3 sm:grid-cols-4 gap-3" layout>
               <AnimatePresence mode="popLayout">
                 {filteredCategories.map((category, index) => (
                   <motion.div
@@ -238,14 +306,28 @@ export function ServicesScreen() {
                 <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
                   <Search className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <p className="text-muted-foreground font-arabic">
-                  لا توجد نتائج للبحث
-                </p>
+                <p className="text-muted-foreground font-arabic">لا توجد نتائج</p>
               </div>
             )}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Vendor Details Sheet */}
+      <VendorDetailsSheet
+        open={!!selectedVendor}
+        onOpenChange={(open) => !open && setSelectedVendor(null)}
+        vendor={selectedVendor}
+      />
+
+      {/* Filter Sheet */}
+      <VendorFilterSheet
+        open={showFilters}
+        onOpenChange={setShowFilters}
+        filters={filters}
+        onFiltersChange={setFilters}
+        availableCities={availableCities}
+      />
     </div>
   );
 }
