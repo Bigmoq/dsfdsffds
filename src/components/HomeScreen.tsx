@@ -1,24 +1,86 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, SlidersHorizontal, MapPin, Calendar, Users } from "lucide-react";
+import { Search, SlidersHorizontal, MapPin, X } from "lucide-react";
 import { weddingHalls, cities, WeddingHall } from "@/data/weddingData";
 import { HallCard } from "./HallCard";
 import { HallDetailsSheet } from "./HallDetailsSheet";
+import { HallFilterSheet, HallFilters, defaultFilters } from "./HallFilterSheet";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export function HomeScreen() {
   const [selectedCity, setSelectedCity] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedHall, setSelectedHall] = useState<WeddingHall | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<HallFilters>(defaultFilters);
 
-  const filteredHalls = selectedCity === "all" 
-    ? weddingHalls 
-    : weddingHalls.filter(h => h.city.toLowerCase() === selectedCity);
+  // Count active filters (excluding defaults)
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.city !== "all") count++;
+    if (filters.minCapacity > 0 || filters.maxCapacity < 2000) count++;
+    if (filters.minPrice > 0 || filters.maxPrice < 100000) count++;
+    if (filters.availability !== "all") count++;
+    return count;
+  }, [filters]);
+
+  // Filter halls based on search and filters
+  const filteredHalls = useMemo(() => {
+    return weddingHalls.filter((hall) => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          hall.name.toLowerCase().includes(query) ||
+          hall.nameAr.includes(searchQuery) ||
+          hall.city.toLowerCase().includes(query) ||
+          hall.cityAr.includes(searchQuery);
+        if (!matchesSearch) return false;
+      }
+
+      // City filter (from tabs or filter sheet)
+      const cityFilter = selectedCity !== "all" ? selectedCity : filters.city;
+      if (cityFilter !== "all") {
+        if (hall.city.toLowerCase() !== cityFilter) return false;
+      }
+
+      // Capacity filter
+      const totalCapacity = hall.capacityMen + hall.capacityWomen;
+      if (totalCapacity < filters.minCapacity || totalCapacity > filters.maxCapacity) {
+        return false;
+      }
+
+      // Price filter
+      if (hall.price < filters.minPrice || hall.price > filters.maxPrice) {
+        return false;
+      }
+
+      // Availability filter
+      if (filters.availability !== "all") {
+        if (!hall.availability.includes(filters.availability)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [searchQuery, selectedCity, filters]);
 
   const handleHallClick = (hall: WeddingHall) => {
     setSelectedHall(hall);
     setSheetOpen(true);
+  };
+
+  const handleCityTabClick = (cityId: string) => {
+    setSelectedCity(cityId);
+    // Sync with filters
+    setFilters((prev) => ({ ...prev, city: cityId }));
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
   };
 
   return (
@@ -50,54 +112,40 @@ export function HomeScreen() {
             className="bg-white/95 backdrop-blur-lg rounded-2xl p-3 shadow-2xl"
           >
             <div className="flex items-center gap-3">
-              <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-xl px-4 py-3">
+              <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-xl px-4 py-3 relative">
                 <input
                   type="text"
                   placeholder="ابحث عن قاعة..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground text-right font-arabic text-sm outline-none"
                   dir="rtl"
                 />
-                <Search className="w-5 h-5 text-muted-foreground" />
+                {searchQuery ? (
+                  <button onClick={clearSearch} className="p-1">
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                ) : (
+                  <Search className="w-5 h-5 text-muted-foreground" />
+                )}
               </div>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-12 w-12 rounded-xl border-border"
-                onClick={() => setShowFilters(!showFilters)}
+                className="h-12 w-12 rounded-xl border-border relative"
+                onClick={() => setShowFilters(true)}
               >
                 <SlidersHorizontal className="w-5 h-5" />
+                {activeFilterCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs gold-gradient border-0">
+                    {activeFilterCount}
+                  </Badge>
+                )}
               </Button>
             </div>
           </motion.div>
         </div>
       </div>
-      
-      {/* Filters */}
-      <motion.div
-        initial={{ height: 0, opacity: 0 }}
-        animate={{ 
-          height: showFilters ? "auto" : 0, 
-          opacity: showFilters ? 1 : 0 
-        }}
-        className="overflow-hidden bg-card border-b border-border"
-      >
-        <div className="p-4 space-y-4">
-          {/* Filter Buttons */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            <Button variant="outline" size="sm" className="flex items-center gap-2 whitespace-nowrap">
-              <Calendar className="w-4 h-4" />
-              <span className="font-arabic">التاريخ</span>
-            </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2 whitespace-nowrap">
-              <Users className="w-4 h-4" />
-              <span className="font-arabic">السعة</span>
-            </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2 whitespace-nowrap">
-              <span className="font-arabic">السعر</span>
-            </Button>
-          </div>
-        </div>
-      </motion.div>
       
       {/* City Tabs */}
       <div className="px-4 py-4">
@@ -105,7 +153,7 @@ export function HomeScreen() {
           {cities.map((city) => (
             <button
               key={city.id}
-              onClick={() => setSelectedCity(city.id)}
+              onClick={() => handleCityTabClick(city.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300 ${
                 selectedCity === city.id
                   ? "gold-gradient text-white shadow-lg"
@@ -130,16 +178,38 @@ export function HomeScreen() {
           </h2>
         </div>
         
-        <div className="space-y-4">
-          {filteredHalls.map((hall, index) => (
-            <HallCard 
-              key={hall.id} 
-              hall={hall} 
-              index={index} 
-              onClick={() => handleHallClick(hall)}
-            />
-          ))}
-        </div>
+        {filteredHalls.length > 0 ? (
+          <div className="space-y-4">
+            {filteredHalls.map((hall, index) => (
+              <HallCard 
+                key={hall.id} 
+                hall={hall} 
+                index={index} 
+                onClick={() => handleHallClick(hall)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground font-arabic text-lg mb-2">
+              لا توجد قاعات مطابقة
+            </p>
+            <p className="text-muted-foreground font-arabic text-sm">
+              جرب تعديل الفلاتر أو البحث بكلمات مختلفة
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4 font-arabic"
+              onClick={() => {
+                setFilters(defaultFilters);
+                setSearchQuery("");
+                setSelectedCity("all");
+              }}
+            >
+              إعادة تعيين الفلاتر
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Hall Details Sheet */}
@@ -147,6 +217,17 @@ export function HomeScreen() {
         hall={selectedHall}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      {/* Filter Sheet */}
+      <HallFilterSheet
+        open={showFilters}
+        onOpenChange={setShowFilters}
+        filters={filters}
+        onApplyFilters={(newFilters) => {
+          setFilters(newFilters);
+          setSelectedCity(newFilters.city);
+        }}
       />
     </div>
   );
