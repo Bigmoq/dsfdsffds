@@ -9,21 +9,60 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { WeddingHall } from "@/data/weddingData";
 import { HallReviews } from "./HallReviews";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+
+// Support both old mock data and new database schema
+interface DatabaseHall {
+  id: string;
+  name_ar: string;
+  name_en?: string;
+  city: string;
+  address?: string;
+  description?: string;
+  price_weekday: number;
+  price_weekend: number;
+  capacity_men: number;
+  capacity_women: number;
+  cover_image?: string;
+  gallery_images?: string[];
+  features?: string[];
+  phone?: string;
+  whatsapp_enabled?: boolean;
+}
+
+interface LegacyHall {
+  id: string;
+  name: string;
+  nameAr: string;
+  city: string;
+  cityAr: string;
+  image: string;
+  price: number;
+  capacityMen: number;
+  capacityWomen: number;
+  rating: number;
+  features: string[];
+}
+
+type HallData = DatabaseHall | LegacyHall;
 
 interface HallDetailsSheetProps {
-  hall: WeddingHall | null;
+  hall: HallData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 type BookingStep = "details" | "date" | "guests" | "confirm";
+
+// Type guard to check if hall is from database
+function isDatabaseHall(hall: HallData): hall is DatabaseHall {
+  return 'name_ar' in hall;
+}
 
 export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetProps) {
   const [step, setStep] = useState<BookingStep>("details");
@@ -34,11 +73,55 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Fetch hall rating from database
+  const { data: ratingData } = useQuery({
+    queryKey: ['hall-rating', hall?.id],
+    queryFn: async () => {
+      if (!hall) return null;
+      const { data, error } = await supabase
+        .rpc('get_hall_rating', { hall_uuid: hall.id });
+      if (error) throw error;
+      return data?.[0] || { average_rating: 0, reviews_count: 0 };
+    },
+    enabled: !!hall && isDatabaseHall(hall),
+  });
+
   if (!hall) return null;
+
+  // Normalize hall data
+  const normalizedHall = isDatabaseHall(hall) ? {
+    id: hall.id,
+    nameAr: hall.name_ar,
+    cityAr: hall.city,
+    image: hall.cover_image || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800',
+    priceWeekday: hall.price_weekday,
+    priceWeekend: hall.price_weekend,
+    capacityMen: hall.capacity_men,
+    capacityWomen: hall.capacity_women,
+    features: hall.features || [],
+    phone: hall.phone,
+    whatsappEnabled: hall.whatsapp_enabled,
+    rating: ratingData?.average_rating || 0,
+    reviewsCount: ratingData?.reviews_count || 0,
+  } : {
+    id: hall.id,
+    nameAr: hall.nameAr,
+    cityAr: hall.cityAr,
+    image: hall.image,
+    priceWeekday: hall.price,
+    priceWeekend: Math.round(hall.price * 1.2),
+    capacityMen: hall.capacityMen,
+    capacityWomen: hall.capacityWomen,
+    features: hall.features,
+    phone: undefined,
+    whatsappEnabled: false,
+    rating: hall.rating,
+    reviewsCount: 0,
+  };
 
   const today = startOfDay(new Date());
   const isWeekend = selectedDate ? [4, 5].includes(selectedDate.getDay()) : false; // Thu, Fri
-  const price = isWeekend ? (hall.price * 1.2) : hall.price;
+  const price = isWeekend ? normalizedHall.priceWeekend : normalizedHall.priceWeekday;
 
   const resetForm = () => {
     setStep("details");
@@ -110,17 +193,17 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
       {/* Hall Image */}
       <div className="relative h-56 rounded-2xl overflow-hidden">
         <img 
-          src={hall.image} 
-          alt={hall.nameAr}
+          src={normalizedHall.image} 
+          alt={normalizedHall.nameAr}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         <div className="absolute bottom-4 right-4 left-4">
           <h3 className="font-display text-2xl font-bold text-white mb-1">
-            {hall.nameAr}
+            {normalizedHall.nameAr}
           </h3>
           <div className="flex items-center gap-1 text-white/90">
-            <span className="text-sm">{hall.cityAr}</span>
+            <span className="text-sm">{normalizedHall.cityAr}</span>
             <MapPin className="w-4 h-4" />
           </div>
         </div>
@@ -131,60 +214,62 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
         <div className="bg-muted/50 rounded-xl p-3 text-center">
           <div className="flex items-center justify-center gap-1 text-resale mb-1">
             <Star className="w-4 h-4 fill-resale" />
-            <span className="font-bold">{hall.rating}</span>
+            <span className="font-bold">{normalizedHall.rating}</span>
           </div>
           <span className="text-xs text-muted-foreground">التقييم</span>
         </div>
         <div className="bg-muted/50 rounded-xl p-3 text-center">
           <div className="flex items-center justify-center gap-1 text-primary mb-1">
             <Users className="w-4 h-4" />
-            <span className="font-bold">{hall.capacityMen}</span>
+            <span className="font-bold">{normalizedHall.capacityMen}</span>
           </div>
           <span className="text-xs text-muted-foreground">رجال</span>
         </div>
         <div className="bg-muted/50 rounded-xl p-3 text-center">
           <div className="flex items-center justify-center gap-1 text-primary mb-1">
             <Users className="w-4 h-4" />
-            <span className="font-bold">{hall.capacityWomen}</span>
+            <span className="font-bold">{normalizedHall.capacityWomen}</span>
           </div>
           <span className="text-xs text-muted-foreground">نساء</span>
         </div>
       </div>
 
       {/* Features */}
-      <div className="space-y-2">
-        <h4 className="font-semibold text-foreground text-right">المميزات</h4>
-        <div className="flex flex-wrap gap-2 justify-end">
-          {hall.features.map((feature, idx) => (
-            <span 
-              key={idx}
-              className="bg-primary/10 text-primary text-xs px-3 py-1.5 rounded-full"
-            >
-              {feature}
-            </span>
-          ))}
+      {normalizedHall.features.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="font-semibold text-foreground text-right">المميزات</h4>
+          <div className="flex flex-wrap gap-2 justify-end">
+            {normalizedHall.features.map((feature, idx) => (
+              <span 
+                key={idx}
+                className="bg-primary/10 text-primary text-xs px-3 py-1.5 rounded-full"
+              >
+                {feature}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Price Info */}
       <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-4 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-lg text-primary">SAR {hall.price.toLocaleString()}</span>
+          <span className="font-bold text-lg text-primary">SAR {normalizedHall.priceWeekday.toLocaleString()}</span>
           <span className="text-sm text-muted-foreground">أيام الأسبوع</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="font-bold text-lg text-resale">SAR {(hall.price * 1.2).toLocaleString()}</span>
+          <span className="font-bold text-lg text-resale">SAR {normalizedHall.priceWeekend.toLocaleString()}</span>
           <span className="text-sm text-muted-foreground">نهاية الأسبوع</span>
         </div>
       </div>
 
       {/* WhatsApp Contact Button */}
-      {(hall as any).phone && (hall as any).whatsapp_enabled && (
+      {normalizedHall.phone && normalizedHall.whatsappEnabled && (
         <Button
           onClick={(e) => {
             e.stopPropagation();
-            const phone = ((hall as any).phone as string).replace(/\D/g, '');
-            const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن قاعة ${hall.nameAr}`);
+            const phone = normalizedHall.phone!.replace(/\D/g, '');
+            const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن قاعة ${normalizedHall.nameAr}`);
             window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
           }}
           className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white gap-2"
@@ -198,7 +283,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
       {/* Reviews Section */}
       <div className="space-y-2">
         <h4 className="font-semibold text-foreground text-right">التقييمات</h4>
-        <HallReviews hallId={hall.id} hallName={hall.nameAr} />
+        <HallReviews hallId={hall.id} hallName={normalizedHall.nameAr} />
       </div>
 
       <Button 
@@ -289,7 +374,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
       {/* Men Guests */}
       <div className="bg-muted/50 rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">الحد الأقصى: {hall.capacityMen}</span>
+          <span className="text-sm text-muted-foreground">الحد الأقصى: {normalizedHall.capacityMen}</span>
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-primary" />
             <span className="font-semibold text-foreground">قسم الرجال</span>
@@ -311,7 +396,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
             variant="outline"
             size="icon"
             className="rounded-full"
-            onClick={() => setGuestCountMen(Math.min(hall.capacityMen, guestCountMen + 10))}
+            onClick={() => setGuestCountMen(Math.min(normalizedHall.capacityMen, guestCountMen + 10))}
           >
             <Plus className="w-4 h-4" />
           </Button>
@@ -321,7 +406,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
       {/* Women Guests */}
       <div className="bg-muted/50 rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">الحد الأقصى: {hall.capacityWomen}</span>
+          <span className="text-sm text-muted-foreground">الحد الأقصى: {normalizedHall.capacityWomen}</span>
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-primary" />
             <span className="font-semibold text-foreground">قسم النساء</span>
@@ -343,7 +428,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
             variant="outline"
             size="icon"
             className="rounded-full"
-            onClick={() => setGuestCountWomen(Math.min(hall.capacityWomen, guestCountWomen + 10))}
+            onClick={() => setGuestCountWomen(Math.min(normalizedHall.capacityWomen, guestCountWomen + 10))}
           >
             <Plus className="w-4 h-4" />
           </Button>
@@ -381,13 +466,13 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
       <div className="bg-gradient-to-br from-primary/10 to-resale/10 rounded-2xl p-5 space-y-4">
         <div className="flex items-center gap-3">
           <img 
-            src={hall.image} 
-            alt={hall.nameAr}
+            src={normalizedHall.image} 
+            alt={normalizedHall.nameAr}
             className="w-16 h-16 rounded-xl object-cover"
           />
           <div className="flex-1 text-right">
-            <h4 className="font-bold text-foreground">{hall.nameAr}</h4>
-            <p className="text-sm text-muted-foreground">{hall.cityAr}</p>
+            <h4 className="font-bold text-foreground">{normalizedHall.nameAr}</h4>
+            <p className="text-sm text-muted-foreground">{normalizedHall.cityAr}</p>
           </div>
         </div>
 
