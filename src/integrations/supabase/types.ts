@@ -186,9 +186,11 @@ export type Database = {
           name_ar: string
           name_en: string | null
           owner_id: string
+          phone: string | null
           price_weekday: number
           price_weekend: number
           updated_at: string | null
+          whatsapp_enabled: boolean | null
         }
         Insert: {
           address?: string | null
@@ -207,9 +209,11 @@ export type Database = {
           name_ar: string
           name_en?: string | null
           owner_id: string
+          phone?: string | null
           price_weekday: number
           price_weekend: number
           updated_at?: string | null
+          whatsapp_enabled?: boolean | null
         }
         Update: {
           address?: string | null
@@ -228,9 +232,11 @@ export type Database = {
           name_ar?: string
           name_en?: string | null
           owner_id?: string
+          phone?: string | null
           price_weekday?: number
           price_weekend?: number
           updated_at?: string | null
+          whatsapp_enabled?: boolean | null
         }
         Relationships: [
           {

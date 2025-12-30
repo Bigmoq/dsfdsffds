@@ -4,7 +4,7 @@ import { ar } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { 
   MapPin, Star, Users, Calendar, Check, X, 
-  ChevronLeft, ChevronRight, Minus, Plus 
+  ChevronLeft, ChevronRight, Minus, Plus, MessageCircle
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -176,6 +176,23 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
           <span className="text-sm text-muted-foreground">نهاية الأسبوع</span>
         </div>
       </div>
+
+      {/* WhatsApp Contact Button */}
+      {(hall as any).phone && (hall as any).whatsapp_enabled && (
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            const phone = ((hall as any).phone as string).replace(/\D/g, '');
+            const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن قاعة ${hall.nameAr}`);
+            window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+          }}
+          className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white gap-2"
+          size="lg"
+        >
+          <MessageCircle className="w-5 h-5" />
+          <span className="font-arabic">تواصل عبر واتساب</span>
+        </Button>
+      )}
 
       <Button 
         className="w-full gold-gradient text-white"
