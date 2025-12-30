@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Building2, ShoppingBag, Package, Plus, ArrowRight, Loader2 } from "lucide-react";
+import { Building2, ShoppingBag, Package, Plus, ArrowRight, Loader2, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { HallManagement } from "./HallManagement";
 import { ServiceProviderManagement } from "./ServiceProviderManagement";
 import { DressSellerManagement } from "./DressSellerManagement";
+import { VendorAnalytics } from "./VendorAnalytics";
 
 export function VendorDashboard() {
   const { user, role } = useAuth();
@@ -84,24 +85,35 @@ export function VendorDashboard() {
         </h3>
         
         {role === "hall_owner" && (
-          <motion.button
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            onClick={() => setActiveView("hall_owner")}
-            className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
-          >
-            <div className="w-14 h-14 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0">
-              <Building2 className="w-7 h-7 text-white" />
-            </div>
-            <div className="flex-1">
-              <h4 className="font-display text-lg font-bold text-foreground">
-                إدارة القاعات
-              </h4>
-              <p className="text-muted-foreground font-arabic text-sm">
-                أضف قاعاتك وأدر الحجوزات والتواريخ
-              </p>
-            </div>
-          </motion.button>
+          <>
+            {/* Analytics Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <VendorAnalytics />
+            </motion.div>
+
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              onClick={() => setActiveView("hall_owner")}
+              className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
+            >
+              <div className="w-14 h-14 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-7 h-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-display text-lg font-bold text-foreground">
+                  إدارة القاعات
+                </h4>
+                <p className="text-muted-foreground font-arabic text-sm">
+                  أضف قاعاتك وأدر الحجوزات والتواريخ
+                </p>
+              </div>
+            </motion.button>
+          </>
         )}
         
         {role === "service_provider" && (
