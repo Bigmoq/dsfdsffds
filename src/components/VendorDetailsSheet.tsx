@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, Star, MapPin, MessageCircle, Phone, ChevronRight, ChevronLeft,
-  Calendar, Package, Clock, CheckCircle, XCircle, AlertCircle
+  Calendar, Package, Clock, CheckCircle, XCircle, AlertCircle, CalendarPlus
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, isSameDay, startOfToday } from "date-fns";
 import { ar } from "date-fns/locale";
 import { VendorReviews } from "./VendorReviews";
+import { ServiceBookingSheet } from "./ServiceBookingSheet";
 
 interface ServicePackage {
   id: string;
@@ -50,7 +51,7 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [bookingSheetOpen, setBookingSheetOpen] = useState(false);
   const images = vendor?.portfolio_images?.length 
     ? vendor.portfolio_images 
     : vendor?.image 
@@ -378,8 +379,20 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
             {/* Reviews Section */}
             <VendorReviews providerId={vendor.id} providerName={vendor.nameAr} />
 
+            {/* Book Now Button */}
+            {packages.length > 0 && (
+              <Button
+                size="lg"
+                className="w-full h-14 text-lg"
+                onClick={() => setBookingSheetOpen(true)}
+              >
+                <CalendarPlus className="w-5 h-5 ml-2" />
+                احجز الآن
+              </Button>
+            )}
+
             {/* Contact Buttons */}
-            <div className="flex gap-3 pt-4 pb-8">
+            <div className="flex gap-3 pt-2 pb-8">
               <Button
                 variant="outline"
                 className="flex-1"
@@ -398,6 +411,20 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
             </div>
           </div>
         </div>
+
+        {/* Booking Sheet */}
+        {vendor && (
+          <ServiceBookingSheet
+            isOpen={bookingSheetOpen}
+            onClose={() => setBookingSheetOpen(false)}
+            provider={{
+              id: vendor.id,
+              name_ar: vendor.nameAr,
+              name_en: vendor.name,
+            }}
+            packages={packages}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );
