@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useServiceBookingNotifications } from "@/hooks/useServiceBookingNotifications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,11 @@ export function ServiceBookingManagement() {
   const queryClient = useQueryClient();
   const [expandedBooking, setExpandedBooking] = useState<string | null>(null);
 
+  // Handle new booking notification - refresh data
+  const handleNewBooking = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['service-bookings'] });
+  }, [queryClient]);
+
   // Fetch user's service providers
   const { data: providers } = useQuery({
     queryKey: ['my-service-providers', user?.id],
@@ -63,6 +69,12 @@ export function ServiceBookingManagement() {
     },
     enabled: !!user?.id,
   });
+
+  // Get provider IDs for realtime notifications
+  const providerIds = providers?.map(p => p.id) || [];
+
+  // Subscribe to real-time booking notifications
+  useServiceBookingNotifications({ providerIds, onNewBooking: handleNewBooking });
 
   // Fetch bookings for user's service providers
   const { data: bookings, isLoading } = useQuery({
