@@ -12,6 +12,7 @@ export interface ServiceCategory {
   nameEn: string;
   icon: LucideIcon;
   color: string;
+  image?: string;
 }
 
 export interface Vendor {
