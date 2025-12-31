@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Building2, ShoppingBag, Package, Plus, ArrowRight, Loader2, BarChart3 } from "lucide-react";
+import { Building2, ShoppingBag, Package, Plus, ArrowRight, Loader2, BarChart3, CalendarCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { HallManagement } from "./HallManagement";
 import { ServiceProviderManagement } from "./ServiceProviderManagement";
 import { DressSellerManagement } from "./DressSellerManagement";
 import { VendorAnalytics } from "./VendorAnalytics";
-
+import { ServiceBookingManagement } from "./ServiceBookingManagement";
 export function VendorDashboard() {
   const { user, role } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,24 @@ export function VendorDashboard() {
           <ArrowRight className="w-4 h-4" />
         </button>
         <ServiceProviderManagement />
+      </div>
+    );
+  }
+
+  if (activeView === "service_bookings") {
+    return (
+      <div>
+        <button
+          onClick={() => setActiveView(null)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors p-4"
+        >
+          <span className="font-arabic text-sm">العودة للوحة التحكم</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+        <div className="px-4">
+          <h2 className="font-display text-xl font-bold text-foreground mb-4 text-right">إدارة الحجوزات</h2>
+          <ServiceBookingManagement />
+        </div>
       </div>
     );
   }
@@ -117,24 +135,46 @@ export function VendorDashboard() {
         )}
         
         {role === "service_provider" && (
-          <motion.button
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            onClick={() => setActiveView("service_provider")}
-            className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
-          >
-            <div className="w-14 h-14 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0">
-              <Package className="w-7 h-7 text-white" />
-            </div>
-            <div className="flex-1">
-              <h4 className="font-display text-lg font-bold text-foreground">
-                إدارة الخدمات
-              </h4>
-              <p className="text-muted-foreground font-arabic text-sm">
-                أضف خدماتك وباقات الأسعار
-              </p>
-            </div>
-          </motion.button>
+          <>
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => setActiveView("service_provider")}
+              className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
+            >
+              <div className="w-14 h-14 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0">
+                <Package className="w-7 h-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-display text-lg font-bold text-foreground">
+                  إدارة الخدمات
+                </h4>
+                <p className="text-muted-foreground font-arabic text-sm">
+                  أضف خدماتك وباقات الأسعار
+                </p>
+              </div>
+            </motion.button>
+
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              onClick={() => setActiveView("service_bookings")}
+              className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
+            >
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+                <CalendarCheck className="w-7 h-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-display text-lg font-bold text-foreground">
+                  إدارة الحجوزات
+                </h4>
+                <p className="text-muted-foreground font-arabic text-sm">
+                  راجع وأدر الحجوزات الواردة
+                </p>
+              </div>
+            </motion.button>
+          </>
         )}
         
         {role === "dress_seller" && (
