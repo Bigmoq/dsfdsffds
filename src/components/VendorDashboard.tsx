@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Building2, ShoppingBag, Package, Plus, ArrowRight, Loader2, BarChart3, CalendarCheck } from "lucide-react";
+import { Building2, ShoppingBag, Package, Plus, ArrowRight, Loader2, BarChart3, CalendarCheck, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { HallManagement } from "./HallManagement";
@@ -8,6 +8,8 @@ import { ServiceProviderManagement } from "./ServiceProviderManagement";
 import { DressSellerManagement } from "./DressSellerManagement";
 import { VendorAnalytics } from "./VendorAnalytics";
 import { ServiceBookingManagement } from "./ServiceBookingManagement";
+import { ServiceBookingCalendar } from "./ServiceBookingCalendar";
+
 export function VendorDashboard() {
   const { user, role } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,24 @@ export function VendorDashboard() {
         <div className="px-4">
           <h2 className="font-display text-xl font-bold text-foreground mb-4 text-right">إدارة الحجوزات</h2>
           <ServiceBookingManagement />
+        </div>
+      </div>
+    );
+  }
+
+  if (activeView === "service_calendar") {
+    return (
+      <div>
+        <button
+          onClick={() => setActiveView(null)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors p-4"
+        >
+          <span className="font-arabic text-sm">العودة للوحة التحكم</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+        <div className="px-4">
+          <h2 className="font-display text-xl font-bold text-foreground mb-4 text-right">تقويم الحجوزات</h2>
+          <ServiceBookingCalendar />
         </div>
       </div>
     );
@@ -171,6 +191,26 @@ export function VendorDashboard() {
                 </h4>
                 <p className="text-muted-foreground font-arabic text-sm">
                   راجع وأدر الحجوزات الواردة
+                </p>
+              </div>
+            </motion.button>
+
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              onClick={() => setActiveView("service_calendar")}
+              className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
+            >
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                <CalendarDays className="w-7 h-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-display text-lg font-bold text-foreground">
+                  تقويم الحجوزات
+                </h4>
+                <p className="text-muted-foreground font-arabic text-sm">
+                  عرض الحجوزات على التقويم
                 </p>
               </div>
             </motion.button>
