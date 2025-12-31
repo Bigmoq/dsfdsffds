@@ -6,10 +6,13 @@ import { ServicesScreen } from "@/components/ServicesScreen";
 import { DressesScreen } from "@/components/DressesScreen";
 import { FavoritesScreen } from "@/components/FavoritesScreen";
 import { ProfileScreen } from "@/components/ProfileScreen";
+import { NotificationsSheet } from "@/components/NotificationsSheet";
+import { useAuth } from "@/hooks/useAuth";
 import { Helmet } from "react-helmet-async";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState(2); // Default to Home (center)
+  const { user } = useAuth();
 
   // Tab order: 0=Services, 1=Dresses, 2=Home, 3=Favorites, 4=Profile
   const screens: Record<number, JSX.Element> = {
@@ -28,6 +31,13 @@ const Index = () => {
       </Helmet>
       
       <div className="min-h-screen bg-background overflow-x-hidden" dir="rtl">
+        {/* Notifications Button - Fixed at top */}
+        {user && (
+          <div className="fixed top-4 left-4 z-50">
+            <NotificationsSheet />
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
