@@ -9,6 +9,7 @@ import { DressSellerManagement } from "./DressSellerManagement";
 import { VendorAnalytics } from "./VendorAnalytics";
 import { ServiceBookingManagement } from "./ServiceBookingManagement";
 import { ServiceBookingCalendar } from "./ServiceBookingCalendar";
+import { VendorQuickStats } from "./VendorQuickStats";
 
 export function VendorDashboard() {
   const { user, role } = useAuth();
@@ -117,6 +118,9 @@ export function VendorDashboard() {
   // Show role-based dashboard options
   return (
     <div className="p-4 space-y-6">
+      {/* Quick Stats */}
+      <VendorQuickStats />
+      
       <div className="space-y-4">
         <h3 className="font-display text-lg font-bold text-foreground text-right">
           لوحة التحكم
