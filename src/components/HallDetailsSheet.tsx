@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { format, addDays, isBefore, startOfDay } from "date-fns";
+import { useState, useEffect } from "react";
+import { format, addDays, isBefore, startOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { ar } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { 
@@ -15,6 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+
+type AvailabilityStatus = 'available' | 'booked' | 'resale';
 
 // Support both old mock data and new database schema
 interface DatabaseHall {
@@ -70,8 +72,37 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
   const [guestCountMen, setGuestCountMen] = useState(100);
   const [guestCountWomen, setGuestCountWomen] = useState(100);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Fetch hall availability
+  useEffect(() => {
+    if (!hall || !open) return;
+
+    const fetchAvailability = async () => {
+      const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+      const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+
+      const { data, error } = await supabase
+        .from('hall_availability')
+        .select('date, status')
+        .eq('hall_id', hall.id)
+        .gte('date', monthStart)
+        .lte('date', monthEnd);
+
+      if (!error && data) {
+        const availabilityMap: Record<string, AvailabilityStatus> = {};
+        data.forEach(item => {
+          availabilityMap[item.date] = item.status as AvailabilityStatus;
+        });
+        setAvailability(availabilityMap);
+      }
+    };
+
+    fetchAvailability();
+  }, [hall, open, currentMonth]);
 
   // Fetch hall rating from database
   const { data: ratingData } = useQuery({
@@ -297,6 +328,24 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
     </motion.div>
   );
 
+  const getDateStatus = (date: Date): AvailabilityStatus | null => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return availability[dateStr] || null;
+  };
+
+  const getStatusStyles = (status: AvailabilityStatus | null) => {
+    switch (status) {
+      case 'available':
+        return 'bg-available text-white hover:bg-available/90';
+      case 'booked':
+        return 'bg-booked text-white opacity-60 cursor-not-allowed';
+      case 'resale':
+        return 'bg-resale text-white hover:bg-resale/90';
+      default:
+        return '';
+    }
+  };
+
   const renderDateSelection = () => (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -313,13 +362,52 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
         <div className="w-10" />
       </div>
 
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-4 text-xs">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-full bg-available" />
+          <span className="text-muted-foreground">متاح</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-full bg-booked" />
+          <span className="text-muted-foreground">محجوز</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-full bg-resale" />
+          <span className="text-muted-foreground">إعادة بيع</span>
+        </div>
+      </div>
+
       <div className="flex justify-center">
         <CalendarComponent
           mode="single"
           selected={selectedDate}
-          onSelect={setSelectedDate}
+          onSelect={(date) => {
+            if (date) {
+              const status = getDateStatus(date);
+              if (status !== 'booked') {
+                setSelectedDate(date);
+              }
+            }
+          }}
+          month={currentMonth}
+          onMonthChange={setCurrentMonth}
           locale={ar}
-          disabled={(date) => isBefore(date, today)}
+          disabled={(date) => {
+            if (isBefore(date, today)) return true;
+            const status = getDateStatus(date);
+            return status === 'booked';
+          }}
+          modifiers={{
+            available: (date) => getDateStatus(date) === 'available',
+            booked: (date) => getDateStatus(date) === 'booked',
+            resale: (date) => getDateStatus(date) === 'resale',
+          }}
+          modifiersClassNames={{
+            available: 'bg-available text-white hover:bg-available/90',
+            booked: 'bg-booked text-white opacity-60',
+            resale: 'bg-resale text-white hover:bg-resale/90',
+          }}
           className="rounded-xl border border-border pointer-events-auto"
         />
       </div>
