@@ -1,10 +1,19 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CalendarCheck, DollarSign, Star, Clock, TrendingUp, TrendingDown } from "lucide-react";
+import { CalendarCheck, DollarSign, Star, Clock, TrendingUp, TrendingDown, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "./ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+
+type TimePeriod = "week" | "month" | "year";
 
 interface QuickStats {
   newBookings: number;
@@ -25,6 +34,7 @@ export function VendorQuickStats() {
   const [stats, setStats] = useState<QuickStats | null>(null);
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("month");
 
   const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
@@ -32,16 +42,45 @@ export function VendorQuickStats() {
     if (user && role) {
       fetchStats();
     }
-  }, [user, role]);
+  }, [user, role, timePeriod]);
+
+  const getDateRanges = () => {
+    const now = new Date();
+    let startDate: Date;
+    let previousStartDate: Date;
+    let previousEndDate: Date;
+
+    switch (timePeriod) {
+      case "week":
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        previousStartDate = new Date(now);
+        previousStartDate.setDate(now.getDate() - 14);
+        previousEndDate = new Date(now);
+        previousEndDate.setDate(now.getDate() - 7);
+        break;
+      case "year":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        previousStartDate = new Date(now.getFullYear() - 1, 0, 1);
+        previousEndDate = new Date(now.getFullYear() - 1, 11, 31);
+        break;
+      case "month":
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        previousStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        previousEndDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        break;
+    }
+
+    return { startDate, previousStartDate, previousEndDate };
+  };
 
   const fetchStats = async () => {
     if (!user) return;
 
     try {
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      const { startDate, previousStartDate, previousEndDate } = getDateRanges();
 
       // Get start of current week (Sunday)
       const startOfWeek = new Date(now);
@@ -52,8 +91,8 @@ export function VendorQuickStats() {
       let totalRevenue = 0;
       let averageRating = 0;
       let pendingBookings = 0;
-      let lastMonthRevenue = 0;
-      let lastMonthBookings = 0;
+      let previousRevenue = 0;
+      let previousBookings = 0;
       let weeklyBookings: { [key: number]: number } = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
 
       if (role === "hall_owner") {
@@ -73,14 +112,14 @@ export function VendorQuickStats() {
             .in("hall_id", hallIds);
 
           if (bookings) {
-            // This month's new bookings
+            // This period's new bookings
             newBookings = bookings.filter(b => 
-              new Date(b.created_at) >= startOfMonth
+              new Date(b.created_at) >= startDate
             ).length;
 
-            // Total revenue (accepted bookings)
+            // Total revenue (accepted bookings) in this period
             totalRevenue = bookings
-              .filter(b => b.status === "accepted")
+              .filter(b => b.status === "accepted" && new Date(b.created_at) >= startDate)
               .reduce((sum, b) => sum + (b.total_price || 0), 0);
 
             // Pending bookings
@@ -95,16 +134,16 @@ export function VendorQuickStats() {
               }
             });
 
-            // Last month stats for comparison
-            lastMonthBookings = bookings.filter(b => {
+            // Previous period stats for comparison
+            previousBookings = bookings.filter(b => {
               const date = new Date(b.created_at);
-              return date >= startOfLastMonth && date <= endOfLastMonth;
+              return date >= previousStartDate && date <= previousEndDate;
             }).length;
 
-            lastMonthRevenue = bookings
+            previousRevenue = bookings
               .filter(b => {
                 const date = new Date(b.created_at);
-                return b.status === "accepted" && date >= startOfLastMonth && date <= endOfLastMonth;
+                return b.status === "accepted" && date >= previousStartDate && date <= previousEndDate;
               })
               .reduce((sum, b) => sum + (b.total_price || 0), 0);
           }
@@ -139,11 +178,11 @@ export function VendorQuickStats() {
 
           if (bookings) {
             newBookings = bookings.filter(b => 
-              new Date(b.created_at) >= startOfMonth
+              new Date(b.created_at) >= startDate
             ).length;
 
             totalRevenue = bookings
-              .filter(b => b.status === "confirmed" || b.status === "completed")
+              .filter(b => (b.status === "confirmed" || b.status === "completed") && new Date(b.created_at) >= startDate)
               .reduce((sum, b) => sum + (b.total_price || 0), 0);
 
             pendingBookings = bookings.filter(b => b.status === "pending").length;
@@ -157,16 +196,16 @@ export function VendorQuickStats() {
               }
             });
 
-            lastMonthBookings = bookings.filter(b => {
+            previousBookings = bookings.filter(b => {
               const date = new Date(b.created_at);
-              return date >= startOfLastMonth && date <= endOfLastMonth;
+              return date >= previousStartDate && date <= previousEndDate;
             }).length;
 
-            lastMonthRevenue = bookings
+            previousRevenue = bookings
               .filter(b => {
                 const date = new Date(b.created_at);
                 return (b.status === "confirmed" || b.status === "completed") && 
-                       date >= startOfLastMonth && date <= endOfLastMonth;
+                       date >= previousStartDate && date <= previousEndDate;
               })
               .reduce((sum, b) => sum + (b.total_price || 0), 0);
           }
@@ -204,12 +243,12 @@ export function VendorQuickStats() {
       }
 
       // Calculate changes
-      const revenueChange = lastMonthRevenue > 0 
-        ? ((totalRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+      const revenueChange = previousRevenue > 0 
+        ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 
         : totalRevenue > 0 ? 100 : 0;
       
-      const bookingsChange = lastMonthBookings > 0 
-        ? ((newBookings - lastMonthBookings) / lastMonthBookings) * 100 
+      const bookingsChange = previousBookings > 0 
+        ? ((newBookings - previousBookings) / previousBookings) * 100 
         : newBookings > 0 ? 100 : 0;
 
       setStats({
@@ -307,8 +346,34 @@ export function VendorQuickStats() {
 
   const hasWeeklyData = weeklyData.some(d => d.bookings > 0);
 
+  const getPeriodLabel = () => {
+    switch (timePeriod) {
+      case "week": return "الأسبوع الماضي";
+      case "year": return "هذه السنة";
+      default: return "هذا الشهر";
+    }
+  };
+
   return (
     <div className="space-y-4 mb-4">
+      {/* Period Filter */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-muted-foreground" />
+          <span className="font-arabic text-sm text-muted-foreground">{getPeriodLabel()}</span>
+        </div>
+        <Select value={timePeriod} onValueChange={(value: TimePeriod) => setTimePeriod(value)}>
+          <SelectTrigger className="w-28 h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="week">أسبوع</SelectItem>
+            <SelectItem value="month">شهر</SelectItem>
+            <SelectItem value="year">سنة</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3">
         {statCards.map((stat, index) => (
