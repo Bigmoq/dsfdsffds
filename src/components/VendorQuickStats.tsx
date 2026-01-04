@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { CalendarCheck, DollarSign, Star, Clock, TrendingUp, TrendingDown, Calendar } from "lucide-react";
+import { CalendarCheck, DollarSign, Star, Clock, TrendingUp, TrendingDown, Calendar, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useBookingNotifications } from "@/hooks/useBookingNotifications";
+import { useServiceBookingNotifications } from "@/hooks/useServiceBookingNotifications";
 import { Skeleton } from "./ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
@@ -31,12 +34,31 @@ interface WeeklyData {
 
 export function VendorQuickStats() {
   const { user, role } = useAuth();
+  const { toast } = useToast();
   const [stats, setStats] = useState<QuickStats | null>(null);
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("month");
+  const [hallIds, setHallIds] = useState<string[]>([]);
+  const [providerIds, setProviderIds] = useState<string[]>([]);
 
   const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+  // Callback for new bookings
+  const handleNewBooking = useCallback(() => {
+    toast({
+      title: "🔔 حجز جديد!",
+      description: "تم استلام طلب حجز جديد - جاري تحديث الإحصائيات",
+      duration: 5000,
+    });
+    fetchStats();
+  }, []);
+
+  // Real-time notifications for hall owners
+  useBookingNotifications({ hallIds, onNewBooking: handleNewBooking });
+
+  // Real-time notifications for service providers
+  useServiceBookingNotifications({ providerIds, onNewBooking: handleNewBooking });
 
   useEffect(() => {
     if (user && role) {
@@ -103,13 +125,14 @@ export function VendorQuickStats() {
           .eq("owner_id", user.id);
 
         if (halls && halls.length > 0) {
-          const hallIds = halls.map(h => h.id);
+          const fetchedHallIds = halls.map(h => h.id);
+          setHallIds(fetchedHallIds);
 
           // Current month bookings
           const { data: bookings } = await supabase
             .from("hall_bookings")
             .select("id, total_price, status, created_at, booking_date")
-            .in("hall_id", hallIds);
+            .in("hall_id", fetchedHallIds);
 
           if (bookings) {
             // This period's new bookings
@@ -151,7 +174,7 @@ export function VendorQuickStats() {
           // Get average rating for all halls
           let totalRating = 0;
           let ratingCount = 0;
-          for (const hallId of hallIds) {
+          for (const hallId of fetchedHallIds) {
             const { data: ratingData } = await supabase.rpc("get_hall_rating", { hall_uuid: hallId });
             if (ratingData && ratingData[0]) {
               totalRating += Number(ratingData[0].average_rating) * Number(ratingData[0].reviews_count);
@@ -168,13 +191,14 @@ export function VendorQuickStats() {
           .eq("owner_id", user.id);
 
         if (providers && providers.length > 0) {
-          const providerIds = providers.map(p => p.id);
+          const fetchedProviderIds = providers.map(p => p.id);
+          setProviderIds(fetchedProviderIds);
 
           // Get bookings
           const { data: bookings } = await supabase
             .from("service_bookings")
             .select("id, total_price, status, created_at, booking_date")
-            .in("provider_id", providerIds);
+            .in("provider_id", fetchedProviderIds);
 
           if (bookings) {
             newBookings = bookings.filter(b => 
