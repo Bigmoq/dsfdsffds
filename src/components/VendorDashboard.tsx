@@ -128,18 +128,10 @@ export function VendorDashboard() {
         
         {role === "hall_owner" && (
           <>
-            {/* Analytics Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <VendorAnalytics />
-            </motion.div>
-
+            {/* Hall Management - First */}
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
               onClick={() => setActiveView("hall_owner")}
               className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
             >
@@ -155,6 +147,15 @@ export function VendorDashboard() {
                 </p>
               </div>
             </motion.button>
+
+            {/* Analytics Card - Second */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <VendorAnalytics />
+            </motion.div>
           </>
         )}
         
