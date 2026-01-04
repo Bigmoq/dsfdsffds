@@ -160,9 +160,18 @@ export function VendorDashboard() {
         
         {role === "service_provider" && (
           <>
+            {/* Analytics Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <VendorAnalytics />
+            </motion.div>
+
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
               onClick={() => setActiveView("service_provider")}
               className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
             >
@@ -182,7 +191,7 @@ export function VendorDashboard() {
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.2 }}
               onClick={() => setActiveView("service_bookings")}
               className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
             >
@@ -202,7 +211,7 @@ export function VendorDashboard() {
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.3 }}
               onClick={() => setActiveView("service_calendar")}
               className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
             >

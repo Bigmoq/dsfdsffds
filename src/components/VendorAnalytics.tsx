@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   TrendingUp, 
+  TrendingDown,
   Calendar, 
   DollarSign, 
   MessageCircle, 
@@ -11,11 +12,13 @@ import {
   ShoppingBag,
   ArrowUp,
   ArrowDown,
-  Loader2
+  Loader2,
+  PieChart as PieChartIcon
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { ar } from "date-fns/locale";
 import { 
@@ -27,7 +30,12 @@ import {
   Tooltip, 
   ResponsiveContainer,
   BarChart,
-  Bar
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell
 } from "recharts";
 
 interface AnalyticsData {
@@ -39,17 +47,39 @@ interface AnalyticsData {
   totalInquiries: number;
   revenueChange: number;
   bookingsChange: number;
+  avgBookingValue: number;
+  conversionRate: number;
   bookingsByDay: { date: string; count: number; revenue: number }[];
+  statusDistribution: { name: string; value: number; color: string }[];
   recentBookings: {
     id: string;
     booking_date: string;
     total_price: number;
     status: string;
-    guest_count_men: number;
-    guest_count_women: number;
+    guest_count_men?: number;
+    guest_count_women?: number;
     hall_name?: string;
+    provider_name?: string;
   }[];
 }
+
+const STATUS_COLORS: { [key: string]: string } = {
+  pending: "#f59e0b",
+  accepted: "#22c55e",
+  confirmed: "#22c55e",
+  completed: "#3b82f6",
+  rejected: "#ef4444",
+  cancelled: "#6b7280",
+};
+
+const STATUS_LABELS: { [key: string]: string } = {
+  pending: "قيد الانتظار",
+  accepted: "مقبول",
+  confirmed: "مؤكد",
+  completed: "مكتمل",
+  rejected: "مرفوض",
+  cancelled: "ملغي",
+};
 
 export function VendorAnalytics() {
   const { user, role } = useAuth();
@@ -58,7 +88,7 @@ export function VendorAnalytics() {
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");
 
   useEffect(() => {
-    if (user && role === "hall_owner") {
+    if (user && (role === "hall_owner" || role === "service_provider")) {
       fetchAnalytics();
     }
   }, [user, role, timeRange]);
@@ -68,40 +98,97 @@ export function VendorAnalytics() {
     setLoading(true);
 
     try {
-      // Fetch user's halls
-      const { data: halls } = await supabase
-        .from("halls")
-        .select("id, name_ar")
-        .eq("owner_id", user.id);
+      let allBookings: any[] = [];
+      let entityNames: { [key: string]: string } = {};
 
-      if (!halls || halls.length === 0) {
-        setAnalytics({
-          totalBookings: 0,
-          pendingBookings: 0,
-          confirmedBookings: 0,
-          totalRevenue: 0,
-          monthlyRevenue: 0,
-          totalInquiries: 0,
-          revenueChange: 0,
-          bookingsChange: 0,
-          bookingsByDay: [],
-          recentBookings: [],
-        });
-        setLoading(false);
-        return;
+      if (role === "hall_owner") {
+        // Fetch user's halls
+        const { data: halls } = await supabase
+          .from("halls")
+          .select("id, name_ar")
+          .eq("owner_id", user.id);
+
+        if (!halls || halls.length === 0) {
+          setAnalytics({
+            totalBookings: 0,
+            pendingBookings: 0,
+            confirmedBookings: 0,
+            totalRevenue: 0,
+            monthlyRevenue: 0,
+            totalInquiries: 0,
+            revenueChange: 0,
+            bookingsChange: 0,
+            avgBookingValue: 0,
+            conversionRate: 0,
+            bookingsByDay: [],
+            statusDistribution: [],
+            recentBookings: [],
+          });
+          setLoading(false);
+          return;
+        }
+
+        const hallIds = halls.map(h => h.id);
+        halls.forEach(h => { entityNames[h.id] = h.name_ar; });
+
+        // Fetch all bookings for user's halls
+        const { data: bookings } = await supabase
+          .from("hall_bookings")
+          .select("*")
+          .in("hall_id", hallIds)
+          .order("created_at", { ascending: false });
+
+        allBookings = (bookings || []).map(b => ({
+          ...b,
+          entity_id: b.hall_id,
+          entity_name: entityNames[b.hall_id],
+          status: b.status || "pending",
+        }));
+      } else if (role === "service_provider") {
+        // Fetch user's service providers
+        const { data: providers } = await supabase
+          .from("service_providers")
+          .select("id, name_ar")
+          .eq("owner_id", user.id);
+
+        if (!providers || providers.length === 0) {
+          setAnalytics({
+            totalBookings: 0,
+            pendingBookings: 0,
+            confirmedBookings: 0,
+            totalRevenue: 0,
+            monthlyRevenue: 0,
+            totalInquiries: 0,
+            revenueChange: 0,
+            bookingsChange: 0,
+            avgBookingValue: 0,
+            conversionRate: 0,
+            bookingsByDay: [],
+            statusDistribution: [],
+            recentBookings: [],
+          });
+          setLoading(false);
+          return;
+        }
+
+        const providerIds = providers.map(p => p.id);
+        providers.forEach(p => { entityNames[p.id] = p.name_ar; });
+
+        // Fetch all bookings for user's providers
+        const { data: bookings } = await supabase
+          .from("service_bookings")
+          .select("*")
+          .in("provider_id", providerIds)
+          .order("created_at", { ascending: false });
+
+        allBookings = (bookings || []).map(b => ({
+          ...b,
+          entity_id: b.provider_id,
+          entity_name: entityNames[b.provider_id],
+          status: b.status || "pending",
+        }));
       }
 
-      const hallIds = halls.map(h => h.id);
-
-      // Fetch all bookings for user's halls
-      const { data: bookings } = await supabase
-        .from("hall_bookings")
-        .select("*")
-        .in("hall_id", hallIds)
-        .order("created_at", { ascending: false });
-
-      const allBookings = bookings || [];
-      
       // Calculate date ranges
       const now = new Date();
       const startOfThisMonth = startOfMonth(now);
@@ -132,18 +219,20 @@ export function VendorAnalytics() {
       // Calculate metrics
       const totalBookings = allBookings.length;
       const pendingBookings = allBookings.filter(b => b.status === "pending").length;
-      const confirmedBookings = allBookings.filter(b => b.status === "accepted").length;
+      const confirmedStatuses = role === "hall_owner" ? ["accepted"] : ["confirmed", "completed"];
+      const confirmedBookings = allBookings.filter(b => confirmedStatuses.includes(b.status)).length;
       
-      const totalRevenue = allBookings
-        .filter(b => b.status === "accepted")
-        .reduce((sum, b) => sum + (b.total_price || 0), 0);
+      const acceptedBookings = allBookings.filter(b => confirmedStatuses.includes(b.status));
+      const totalRevenue = acceptedBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+      const avgBookingValue = acceptedBookings.length > 0 ? totalRevenue / acceptedBookings.length : 0;
+      const conversionRate = totalBookings > 0 ? (acceptedBookings.length / totalBookings) * 100 : 0;
 
       const monthlyRevenue = thisMonthBookings
-        .filter(b => b.status === "accepted")
+        .filter(b => confirmedStatuses.includes(b.status))
         .reduce((sum, b) => sum + (b.total_price || 0), 0);
 
       const lastMonthRevenue = lastMonthBookings
-        .filter(b => b.status === "accepted")
+        .filter(b => confirmedStatuses.includes(b.status))
         .reduce((sum, b) => sum + (b.total_price || 0), 0);
 
       const revenueChange = lastMonthRevenue > 0 
@@ -153,6 +242,18 @@ export function VendorAnalytics() {
       const bookingsChange = lastMonthBookings.length > 0
         ? ((thisMonthBookings.length - lastMonthBookings.length) / lastMonthBookings.length) * 100
         : thisMonthBookings.length > 0 ? 100 : 0;
+
+      // Status distribution
+      const statusCounts: { [key: string]: number } = {};
+      allBookings.forEach(b => {
+        const status = b.status || "pending";
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+      const statusDistribution = Object.entries(statusCounts).map(([status, count]) => ({
+        name: STATUS_LABELS[status] || status,
+        value: count,
+        color: STATUS_COLORS[status] || "#6b7280",
+      }));
 
       // Prepare chart data
       const days = eachDayOfInterval({ start: rangeStart, end: now });
@@ -165,24 +266,22 @@ export function VendorAnalytics() {
           date: format(day, "dd MMM", { locale: ar }),
           count: dayBookings.length,
           revenue: dayBookings
-            .filter(b => b.status === "accepted")
+            .filter(b => confirmedStatuses.includes(b.status))
             .reduce((sum, b) => sum + (b.total_price || 0), 0),
         };
       });
 
-      // Recent bookings with hall names
-      const recentBookings = allBookings.slice(0, 5).map(b => {
-        const hall = halls.find(h => h.id === b.hall_id);
-        return {
-          id: b.id,
-          booking_date: b.booking_date,
-          total_price: b.total_price || 0,
-          status: b.status || "pending",
-          guest_count_men: b.guest_count_men || 0,
-          guest_count_women: b.guest_count_women || 0,
-          hall_name: hall?.name_ar,
-        };
-      });
+      // Recent bookings
+      const recentBookings = allBookings.slice(0, 5).map(b => ({
+        id: b.id,
+        booking_date: b.booking_date,
+        total_price: b.total_price || 0,
+        status: b.status || "pending",
+        guest_count_men: b.guest_count_men || 0,
+        guest_count_women: b.guest_count_women || 0,
+        hall_name: role === "hall_owner" ? b.entity_name : undefined,
+        provider_name: role === "service_provider" ? b.entity_name : undefined,
+      }));
 
       setAnalytics({
         totalBookings,
@@ -190,10 +289,13 @@ export function VendorAnalytics() {
         confirmedBookings,
         totalRevenue,
         monthlyRevenue,
-        totalInquiries: 0, // Placeholder - could track WhatsApp clicks
+        totalInquiries: 0,
         revenueChange,
         bookingsChange,
+        avgBookingValue: Math.round(avgBookingValue),
+        conversionRate: Math.round(conversionRate),
         bookingsByDay,
+        statusDistribution,
         recentBookings,
       });
     } catch (error) {
@@ -331,12 +433,12 @@ export function VendorAnalytics() {
           <Card className="card-luxe">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-yellow-600" />
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-purple-600" />
                 </div>
               </div>
-              <p className="text-2xl font-bold text-foreground">{analytics.pendingBookings}</p>
-              <p className="text-xs text-muted-foreground font-arabic">حجوزات قيد المراجعة</p>
+              <p className="text-2xl font-bold text-foreground">{analytics.avgBookingValue.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground font-arabic">متوسط قيمة الحجز (ر.س)</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -350,7 +452,46 @@ export function VendorAnalytics() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <MessageCircle className="w-5 h-5 text-blue-600" />
+                  <PieChartIcon className="w-5 h-5 text-blue-600" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{analytics.conversionRate}%</p>
+              <p className="text-xs text-muted-foreground font-arabic">معدل التحويل</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          <Card className="card-luxe">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-yellow-600" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{analytics.pendingBookings}</p>
+              <p className="text-xs text-muted-foreground font-arabic">حجوزات قيد المراجعة</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          <Card className="card-luxe">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5 text-green-600" />
                 </div>
               </div>
               <p className="text-2xl font-bold text-foreground">{analytics.confirmedBookings}</p>
@@ -485,6 +626,66 @@ export function VendorAnalytics() {
         </Card>
       </motion.div>
 
+      {/* Status Distribution Pie Chart */}
+      {analytics.statusDistribution.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55 }}
+        >
+          <Card className="card-luxe">
+            <CardHeader>
+              <CardTitle className="font-display text-lg text-right">
+                توزيع حالات الحجوزات
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={analytics.statusDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {analytics.statusDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                        direction: "rtl",
+                      }}
+                      formatter={(value: number, name: string) => [`${value} حجز`, name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap justify-center gap-4 mt-4">
+                {analytics.statusDistribution.map((item, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-xs font-arabic text-muted-foreground">
+                      {item.name} ({item.value})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Recent Bookings */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -515,7 +716,7 @@ export function VendorAnalytics() {
                     </div>
                     <div className="text-right">
                       <p className="font-arabic text-sm text-foreground">
-                        {booking.hall_name || "قاعة"}
+                        {booking.hall_name || booking.provider_name || (role === "hall_owner" ? "قاعة" : "خدمة")}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(booking.booking_date), "d MMMM yyyy", { locale: ar })}
