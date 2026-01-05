@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Search, SlidersHorizontal, Sparkles, Tag } from "lucide-react";
+import { Plus, Search, SlidersHorizontal, Sparkles, Tag, ArrowUpDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { DressCard } from "./DressCard";
@@ -10,8 +10,22 @@ import { mockDresses, Dress, saudiCities } from "@/data/weddingData";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type ConditionTab = "all" | "new" | "used";
+type SortOption = "newest" | "oldest" | "price_low" | "price_high";
+
+const sortOptions: { id: SortOption; label: string }[] = [
+  { id: "newest", label: "الأحدث" },
+  { id: "oldest", label: "الأقدم" },
+  { id: "price_low", label: "السعر: من الأقل" },
+  { id: "price_high", label: "السعر: من الأعلى" },
+];
 
 export function DressesScreen() {
   const [selectedDress, setSelectedDress] = useState<any>(null);
@@ -21,6 +35,7 @@ export function DressesScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCondition, setSelectedCondition] = useState<ConditionTab>("all");
   const [selectedCity, setSelectedCity] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [filters, setFilters] = useState<DressFilters>({
     city: "",
     size: "",
@@ -69,7 +84,7 @@ export function DressesScreen() {
   }, [dbDresses]);
 
   const filteredDresses = useMemo(() => {
-    return allDresses.filter((dress) => {
+    let result = allDresses.filter((dress) => {
       // Search filter
       const matchesSearch = dress.title.includes(searchQuery) || dress.city.includes(searchQuery);
       
@@ -90,7 +105,25 @@ export function DressesScreen() {
       
       return matchesSearch && matchesCondition && matchesQuickCity && matchesFilterCity && matchesSize && matchesPrice;
     });
-  }, [allDresses, searchQuery, selectedCondition, selectedCity, filters]);
+
+    // Sort results
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return ((b as any).created_at || '').localeCompare((a as any).created_at || '');
+        case "oldest":
+          return ((a as any).created_at || '').localeCompare((b as any).created_at || '');
+        case "price_low":
+          return a.price - b.price;
+        case "price_high":
+          return b.price - a.price;
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [allDresses, searchQuery, selectedCondition, selectedCity, filters, sortBy]);
 
   const activeFiltersCount = [
     filters.city,
@@ -186,15 +219,28 @@ export function DressesScreen() {
         </div>
       </div>
 
-      {/* Results Count */}
+      {/* Results Count & Sort */}
       <div className="px-4 py-3 flex items-center justify-between">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowUpDown className="w-4 h-4" />
+            <span className="font-arabic">{sortOptions.find(o => o.id === sortBy)?.label}</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="font-arabic">
+            {sortOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.id}
+                onClick={() => setSortBy(option.id)}
+                className={sortBy === option.id ? "bg-muted" : ""}
+              >
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Badge variant="secondary" className="font-arabic">
           {filteredDresses.length} فستان
         </Badge>
-        <span className="text-sm text-muted-foreground font-arabic">
-          {selectedCondition === "new" ? "فساتين جديدة" : 
-           selectedCondition === "used" ? "فساتين مستعملة" : "جميع الفساتين"}
-        </span>
       </div>
 
       {/* Dresses Grid */}
