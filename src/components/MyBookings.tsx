@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { 
   Calendar, Users, MapPin, Clock, ChevronDown, 
-  CheckCircle, XCircle, Loader2, Building2, Package, AlertCircle
+  CheckCircle, XCircle, Loader2, Building2, Package, Star
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
+import { AddVendorReviewSheet } from "./AddVendorReviewSheet";
+import { AddHallReviewSheet } from "./AddHallReviewSheet";
 
 type HallBooking = Database["public"]["Tables"]["hall_bookings"]["Row"] & {
   halls: Database["public"]["Tables"]["halls"]["Row"] | null;
@@ -55,6 +57,12 @@ export function MyBookings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  
+  // Review sheet states
+  const [reviewServiceBooking, setReviewServiceBooking] = useState<ServiceBooking | null>(null);
+  const [reviewHallBooking, setReviewHallBooking] = useState<HallBooking | null>(null);
+  const [userServiceReviews, setUserServiceReviews] = useState<Record<string, any>>({});
+  const [userHallReviews, setUserHallReviews] = useState<Record<string, any>>({});
 
   // Fetch hall bookings
   const { data: hallBookings = [], isLoading: hallLoading } = useQuery({
@@ -88,6 +96,34 @@ export function MyBookings() {
 
       if (error) throw error;
       return data as ServiceBooking[];
+    },
+    enabled: !!user,
+  });
+
+  // Fetch user's service reviews
+  const { data: serviceReviews = [] } = useQuery({
+    queryKey: ['user-service-reviews', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("service_provider_reviews")
+        .select("id, provider_id, rating, comment")
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Fetch user's hall reviews
+  const { data: hallReviews = [] } = useQuery({
+    queryKey: ['user-hall-reviews', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hall_reviews")
+        .select("id, hall_id, rating, comment")
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      return data;
     },
     enabled: !!user,
   });
@@ -248,6 +284,7 @@ export function MyBookings() {
   }
 
   return (
+    <>
     <Tabs defaultValue={hasServiceBookings ? "services" : "halls"} className="w-full" dir="rtl">
       <TabsList className="grid w-full grid-cols-2 mb-4">
         <TabsTrigger value="services" className="relative">
@@ -360,6 +397,20 @@ export function MyBookings() {
                       }`}>
                         {getServiceStatusMessage(booking.status)}
                       </div>
+
+                      {/* Rate Button for completed bookings */}
+                      {booking.status === "completed" && (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => setReviewServiceBooking(booking)}
+                        >
+                          <Star className="w-4 h-4 ml-2" />
+                          {serviceReviews.find(r => r.provider_id === booking.provider_id)
+                            ? "تعديل التقييم"
+                            : "قيّم الخدمة"}
+                        </Button>
+                      )}
 
                       {/* Cancel Button */}
                       {(booking.status === "pending" || booking.status === "confirmed") && (
@@ -504,6 +555,20 @@ export function MyBookings() {
                         {getStatusMessage(booking.status)}
                       </div>
 
+                      {/* Rate Button for accepted hall bookings */}
+                      {booking.status === "accepted" && (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => setReviewHallBooking(booking)}
+                        >
+                          <Star className="w-4 h-4 ml-2" />
+                          {hallReviews.find(r => r.hall_id === booking.hall_id)
+                            ? "تعديل التقييم"
+                            : "قيّم القاعة"}
+                        </Button>
+                      )}
+
                       <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
                         <span>
                           تم الطلب: {format(new Date(booking.created_at || ""), "d MMM yyyy", { locale: ar })}
@@ -519,5 +584,37 @@ export function MyBookings() {
         )}
       </TabsContent>
     </Tabs>
+
+    {/* Service Review Sheet */}
+    {reviewServiceBooking && (
+      <AddVendorReviewSheet
+        open={!!reviewServiceBooking}
+        onOpenChange={(open) => !open && setReviewServiceBooking(null)}
+        providerId={reviewServiceBooking.provider_id}
+        providerName={reviewServiceBooking.service_providers?.name_ar || "مقدم الخدمة"}
+        existingReview={serviceReviews.find(r => r.provider_id === reviewServiceBooking.provider_id) || null}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['user-service-reviews'] });
+          setReviewServiceBooking(null);
+        }}
+      />
+    )}
+
+    {/* Hall Review Sheet */}
+    {reviewHallBooking && (
+      <AddHallReviewSheet
+        open={!!reviewHallBooking}
+        onOpenChange={(open) => !open && setReviewHallBooking(null)}
+        hallId={reviewHallBooking.hall_id}
+        hallName={reviewHallBooking.halls?.name_ar || "القاعة"}
+        bookingId={reviewHallBooking.id}
+        existingReview={hallReviews.find(r => r.hall_id === reviewHallBooking.hall_id) || null}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['user-hall-reviews'] });
+          setReviewHallBooking(null);
+        }}
+      />
+    )}
+  </>
   );
 }
