@@ -3,7 +3,8 @@ import { Star, MessageCircle, MapPin, Heart, Package, CheckCircle } from "lucide
 import { Vendor } from "@/data/weddingData";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useState, useRef } from "react";
+import { useRef } from "react";
+import { useServiceFavorites } from "@/hooks/useServiceFavorites";
 
 interface ExtendedVendor extends Vendor {
   city?: string;
@@ -21,8 +22,9 @@ interface VendorCardProps {
 }
 
 export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
-  const [isLiked, setIsLiked] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { isFavorite, toggleFavorite } = useServiceFavorites();
+  const isLiked = isFavorite(vendor.id);
 
   const images = vendor.portfolio_images?.length 
     ? vendor.portfolio_images.slice(0, 5) 
@@ -37,7 +39,7 @@ export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
 
   const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsLiked(!isLiked);
+    toggleFavorite(vendor.id);
   };
 
   const handleCardClick = () => {

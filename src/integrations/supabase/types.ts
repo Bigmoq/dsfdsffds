@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      dress_favorites: {
+        Row: {
+          created_at: string
+          dress_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dress_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dress_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dress_favorites_dress_id_fkey"
+            columns: ["dress_id"]
+            isOneToOne: false
+            referencedRelation: "dresses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dresses: {
         Row: {
           category: string | null
@@ -444,6 +473,35 @@ export type Database = {
           },
           {
             foreignKeyName: "service_bookings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          provider_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          provider_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          provider_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_favorites_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "service_providers"
