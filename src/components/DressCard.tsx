@@ -1,12 +1,12 @@
 import { MapPin, Sparkles, Tag, Heart, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Dress } from "@/data/weddingData";
-import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
+import { useDressFavorites } from "@/hooks/useDressFavorites";
 
 interface DressCardProps {
-  dress: Dress & { condition?: string; created_at?: string };
+  dress: Dress & { condition?: string; created_at?: string; id?: string };
   onClick: () => void;
 }
 
@@ -21,13 +21,17 @@ function getTimeAgo(dateString?: string): string {
 }
 
 export function DressCard({ dress, onClick }: DressCardProps) {
-  const [isLiked, setIsLiked] = useState(false);
+  const { isFavorite, toggleFavorite } = useDressFavorites();
+  const dressId = (dress as any).id;
+  const isLiked = dressId ? isFavorite(dressId) : false;
   const isNew = dress.condition === 'new';
   const timeAgo = getTimeAgo((dress as any).created_at);
 
   const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsLiked(!isLiked);
+    if (dressId) {
+      toggleFavorite(dressId);
+    }
   };
 
   return (
