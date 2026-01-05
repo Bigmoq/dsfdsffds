@@ -22,6 +22,11 @@ const conditions = [
   { value: "new", label: "جديد (لم يُستخدم)", icon: "✨" },
   { value: "used", label: "مستعمل (بحالة ممتازة)", icon: "💎" },
 ];
+const categories = [
+  { value: "wedding", label: "فستان زواج", icon: "👰" },
+  { value: "evening", label: "فستان سهرة", icon: "✨" },
+  { value: "maternity", label: "فستان حمل", icon: "🤰" },
+];
 
 type Step = 1 | 2 | 3;
 
@@ -38,6 +43,7 @@ export function SellDressSheet({ open, onClose }: SellDressSheetProps) {
     size: "",
     city: "",
     condition: "",
+    category: "wedding",
     description: "",
   });
 
@@ -59,7 +65,7 @@ export function SellDressSheet({ open, onClose }: SellDressSheetProps) {
 
   const resetForm = () => {
     setStep(1);
-    setFormData({ title: "", price: "", size: "", city: "", condition: "", description: "" });
+    setFormData({ title: "", price: "", size: "", city: "", condition: "", category: "wedding", description: "" });
     setImages([]);
     setImageUrls([]);
   };
@@ -151,6 +157,7 @@ export function SellDressSheet({ open, onClose }: SellDressSheetProps) {
         size: formData.size,
         city: formData.city,
         condition: formData.condition,
+        category: formData.category,
         description: formData.description,
         images: uploadedUrls,
         is_active: true,
@@ -278,6 +285,28 @@ export function SellDressSheet({ open, onClose }: SellDressSheetProps) {
                     />
                   </div>
 
+                  {/* Category */}
+                  <div className="space-y-2">
+                    <Label className="font-arabic">تصنيف الفستان *</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {categories.map((cat) => (
+                        <button
+                          key={cat.value}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, category: cat.value })}
+                          className={`p-3 rounded-xl border-2 text-center transition-all ${
+                            formData.category === cat.value
+                              ? "border-primary bg-primary/10"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <span className="text-xl mb-1 block">{cat.icon}</span>
+                          <span className="text-xs font-arabic">{cat.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Condition */}
                   <div className="space-y-2">
                     <Label className="font-arabic">حالة الفستان *</Label>
@@ -400,7 +429,10 @@ export function SellDressSheet({ open, onClose }: SellDressSheetProps) {
                         <span className="text-primary font-bold">{parseInt(formData.price).toLocaleString()} ر.س</span>
                         <span className="text-muted-foreground">{formData.city}</span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
+                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs">
+                          {categories.find(c => c.value === formData.category)?.label}
+                        </span>
                         <span className="bg-muted px-2 py-0.5 rounded-full text-xs">
                           مقاس: {formData.size}
                         </span>

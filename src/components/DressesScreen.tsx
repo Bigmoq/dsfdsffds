@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 type ConditionTab = "all" | "new" | "used";
+type CategoryTab = "all" | "wedding" | "evening" | "maternity";
 type SortOption = "newest" | "oldest" | "price_low" | "price_high";
 
 const sortOptions: { id: SortOption; label: string }[] = [
@@ -25,6 +26,13 @@ const sortOptions: { id: SortOption; label: string }[] = [
   { id: "oldest", label: "الأقدم" },
   { id: "price_low", label: "السعر: من الأقل" },
   { id: "price_high", label: "السعر: من الأعلى" },
+];
+
+const categoryTabs: { id: CategoryTab; label: string; icon: string }[] = [
+  { id: "all", label: "الكل", icon: "👗" },
+  { id: "wedding", label: "زواج", icon: "👰" },
+  { id: "evening", label: "سهرة", icon: "✨" },
+  { id: "maternity", label: "حمل", icon: "🤰" },
 ];
 
 export function DressesScreen() {
@@ -35,6 +43,7 @@ export function DressesScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCondition, setSelectedCondition] = useState<ConditionTab>("all");
   const [selectedCity, setSelectedCity] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<CategoryTab>("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [filters, setFilters] = useState<DressFilters>({
     city: "",
@@ -69,14 +78,17 @@ export function DressesScreen() {
       images: d.images || [],
       phone: '',
       condition: d.condition || 'used',
+      category: (d as any).category || 'wedding',
       description: d.description,
       isFromDb: true,
+      created_at: d.created_at,
     }));
     
-    // Add condition to mock dresses
-    const mockDressesWithCondition = mockDresses.map(d => ({
+    // Add condition and category to mock dresses
+    const mockDressesWithCondition = mockDresses.map((d, idx) => ({
       ...d,
       condition: Math.random() > 0.5 ? 'new' : 'used',
+      category: ['wedding', 'evening', 'maternity'][idx % 3],
       isFromDb: false,
     }));
     
@@ -91,6 +103,9 @@ export function DressesScreen() {
       // Condition filter
       const matchesCondition = selectedCondition === "all" || dress.condition === selectedCondition;
       
+      // Category filter
+      const matchesCategory = selectedCategory === "all" || (dress as any).category === selectedCategory;
+      
       // City filter (from quick tabs)
       const matchesQuickCity = selectedCity === "all" || dress.city === selectedCity;
       
@@ -103,7 +118,7 @@ export function DressesScreen() {
       // Price filter
       const matchesPrice = dress.price >= filters.priceRange[0] && dress.price <= filters.priceRange[1];
       
-      return matchesSearch && matchesCondition && matchesQuickCity && matchesFilterCity && matchesSize && matchesPrice;
+      return matchesSearch && matchesCondition && matchesCategory && matchesQuickCity && matchesFilterCity && matchesSize && matchesPrice;
     });
 
     // Sort results
@@ -123,7 +138,7 @@ export function DressesScreen() {
     });
 
     return result;
-  }, [allDresses, searchQuery, selectedCondition, selectedCity, filters, sortBy]);
+  }, [allDresses, searchQuery, selectedCondition, selectedCategory, selectedCity, filters, sortBy]);
 
   const activeFiltersCount = [
     filters.city,
@@ -183,19 +198,37 @@ export function DressesScreen() {
           </button>
         </div>
 
+        {/* Category Tabs */}
+        <div className="flex justify-center gap-2 mb-4">
+          {categoryTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedCategory(tab.id)}
+              className={`px-3 py-2 rounded-full text-sm font-arabic flex items-center gap-1.5 transition-all ${
+                selectedCategory === tab.id
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "bg-card text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <span className="text-sm">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Condition Tabs */}
         <div className="flex justify-center gap-2 mb-4">
           {conditionTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setSelectedCondition(tab.id)}
-              className={`px-4 py-2 rounded-full text-sm font-arabic flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs font-arabic flex items-center gap-1 transition-all ${
                 selectedCondition === tab.id
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "bg-card text-muted-foreground hover:bg-muted"
+                  ? "bg-foreground text-background"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
               }`}
             >
-              {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
+              {tab.icon && <tab.icon className="w-3 h-3" />}
               {tab.label}
             </button>
           ))}
