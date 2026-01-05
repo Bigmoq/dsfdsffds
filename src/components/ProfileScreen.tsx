@@ -11,6 +11,7 @@ import { AdminPanel } from "./AdminPanel";
 import { NotificationsSheet } from "./NotificationsSheet";
 import { SettingsSheet } from "./SettingsSheet";
 import { ProfileEditSheet } from "./ProfileEditSheet";
+import { HelpSheet } from "./HelpSheet";
 import { toast } from "sonner";
 
 export function ProfileScreen() {
@@ -23,12 +24,13 @@ export function ProfileScreen() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const menuItems = [
     { icon: User, label: "الملف الشخصي", labelEn: "Profile", action: () => setShowProfileEdit(true) },
     { icon: Bell, label: "الإشعارات", labelEn: "Notifications", action: () => setShowNotifications(true) },
     { icon: Settings, label: "الإعدادات", labelEn: "Settings", action: () => setShowSettings(true) },
-    { icon: HelpCircle, label: "المساعدة", labelEn: "Help", action: () => toast.info("قريباً - المساعدة") },
+    { icon: HelpCircle, label: "المساعدة", labelEn: "Help", action: () => setShowHelp(true) },
   ];
 
   const handleLogout = async () => {
@@ -378,6 +380,11 @@ export function ProfileScreen() {
       <ProfileEditSheet
         open={showProfileEdit}
         onOpenChange={setShowProfileEdit}
+      />
+      
+      <HelpSheet
+        open={showHelp}
+        onOpenChange={setShowHelp}
       />
     </div>
   );
