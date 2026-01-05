@@ -10,21 +10,42 @@ import { VendorAnalytics } from "./VendorAnalytics";
 import { ServiceBookingManagement } from "./ServiceBookingManagement";
 import { ServiceBookingCalendar } from "./ServiceBookingCalendar";
 import { VendorQuickStats } from "./VendorQuickStats";
+import { VendorWelcome } from "./VendorWelcome";
 
 export function VendorDashboard() {
   const { user, role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     if (user && role) {
       setLoading(false);
-      // Auto-navigate to the relevant dashboard based on role
-      if (role !== "user") {
+      
+      // Check if this is the first time for hall_owner
+      if (role === "hall_owner") {
+        const welcomeKey = `vendor_welcome_seen_${user.id}`;
+        const hasSeenWelcome = localStorage.getItem(welcomeKey);
+        
+        if (!hasSeenWelcome) {
+          setShowWelcome(true);
+        } else {
+          setActiveView(role);
+        }
+      } else if (role !== "user") {
         setActiveView(role);
       }
     }
   }, [user, role]);
+
+  const handleWelcomeComplete = () => {
+    if (user) {
+      const welcomeKey = `vendor_welcome_seen_${user.id}`;
+      localStorage.setItem(welcomeKey, "true");
+    }
+    setShowWelcome(false);
+    setActiveView(role);
+  };
 
   if (loading) {
     return (
@@ -32,6 +53,10 @@ export function VendorDashboard() {
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
+  }
+
+  if (showWelcome && role === "hall_owner") {
+    return <VendorWelcome onComplete={handleWelcomeComplete} />;
   }
 
   if (activeView === "hall_owner") {
