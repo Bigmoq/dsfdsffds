@@ -27,10 +27,23 @@ interface Notification {
   created_at: string;
 }
 
-export function NotificationsSheet() {
+interface NotificationsSheetProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
+}
+
+export function NotificationsSheet({ open: controlledOpen, onOpenChange, showTrigger = true }: NotificationsSheetProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (onOpenChange) onOpenChange(value);
+    if (!isControlled) setInternalOpen(value);
+  };
 
   // Fetch notifications
   const { data: notifications = [], isLoading } = useQuery({
@@ -139,20 +152,22 @@ export function NotificationsSheet() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center font-bold"
-            >
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </motion.span>
-          )}
-        </Button>
-      </SheetTrigger>
+      {showTrigger && (
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center font-bold"
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </motion.span>
+            )}
+          </Button>
+        </SheetTrigger>
+      )}
       
       <SheetContent side="right" className="w-full sm:max-w-md p-0">
         <SheetHeader className="p-4 border-b">
