@@ -10,6 +10,7 @@ import { MyBookings } from "./MyBookings";
 import { AdminPanel } from "./AdminPanel";
 import { NotificationsSheet } from "./NotificationsSheet";
 import { SettingsSheet } from "./SettingsSheet";
+import { ProfileEditSheet } from "./ProfileEditSheet";
 import { toast } from "sonner";
 
 export function ProfileScreen() {
@@ -21,9 +22,10 @@ export function ProfileScreen() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
 
   const menuItems = [
-    { icon: User, label: "الملف الشخصي", labelEn: "Profile", action: () => toast.info("قريباً - الملف الشخصي") },
+    { icon: User, label: "الملف الشخصي", labelEn: "Profile", action: () => setShowProfileEdit(true) },
     { icon: Bell, label: "الإشعارات", labelEn: "Notifications", action: () => setShowNotifications(true) },
     { icon: Settings, label: "الإعدادات", labelEn: "Settings", action: () => setShowSettings(true) },
     { icon: HelpCircle, label: "المساعدة", labelEn: "Help", action: () => toast.info("قريباً - المساعدة") },
@@ -371,6 +373,11 @@ export function ProfileScreen() {
       <SettingsSheet
         open={showSettings}
         onOpenChange={setShowSettings}
+      />
+      
+      <ProfileEditSheet
+        open={showProfileEdit}
+        onOpenChange={setShowProfileEdit}
       />
     </div>
   );
