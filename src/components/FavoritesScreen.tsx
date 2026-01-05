@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Loader2, MapPin, Users, Trash2, Star, Sparkles, Tag, Building2, Scissors, Shirt } from "lucide-react";
+import { Heart, Loader2, MapPin, Users, Trash2, Star, Sparkles, Tag, Building2, Scissors, Shirt, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -11,11 +11,16 @@ import { Badge } from "@/components/ui/badge";
 import { HallDetailsSheet } from "./HallDetailsSheet";
 import { VendorDetailsSheet } from "./VendorDetailsSheet";
 import { DressDetailsSheet } from "./DressDetailsSheet";
+import { womenCategories, menCategories } from "@/data/weddingData";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { Database } from "@/integrations/supabase/types";
 
 type Hall = Database["public"]["Tables"]["halls"]["Row"];
 type ServiceProvider = Database["public"]["Tables"]["service_providers"]["Row"];
 type Dress = Database["public"]["Tables"]["dresses"]["Row"];
+
+// Combine all categories for lookup
+const allCategories = [...womenCategories, ...menCategories];
 
 type TabType = 'halls' | 'services' | 'dresses';
 
@@ -454,7 +459,7 @@ function HallsFavorites({
   );
 }
 
-// Services Favorites Component
+// Services Favorites Component - Grouped by Category
 function ServicesFavorites({ 
   services, 
   onServiceClick, 
@@ -464,62 +469,143 @@ function ServicesFavorites({
   onServiceClick: (service: ServiceProvider) => void;
   onRemove: (id: string) => void;
 }) {
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+
+  // Group services by category
+  const groupedServices = useMemo(() => {
+    const groups: Record<string, { category: typeof allCategories[0] | null; services: ServiceProvider[] }> = {};
+    
+    services.forEach(service => {
+      const categoryId = service.category_id;
+      if (!groups[categoryId]) {
+        const categoryInfo = allCategories.find(c => c.id === categoryId);
+        groups[categoryId] = {
+          category: categoryInfo || null,
+          services: []
+        };
+      }
+      groups[categoryId].services.push(service);
+    });
+    
+    return groups;
+  }, [services]);
+
+  // Initialize all categories as open
+  useEffect(() => {
+    const initialState: Record<string, boolean> = {};
+    Object.keys(groupedServices).forEach(key => {
+      initialState[key] = true;
+    });
+    setOpenCategories(initialState);
+  }, [groupedServices]);
+
+  const toggleCategory = (categoryId: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
   if (services.length === 0) {
     return <EmptyState icon={Scissors} title="لا توجد خدمات مفضلة" message="اضغط على أيقونة القلب في أي خدمة لإضافتها هنا" />;
   }
 
   return (
     <div className="p-4 space-y-4">
-      {services.map((service, index) => (
-        <motion.div
-          key={service.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.05 }}
-          className="card-luxe rounded-2xl overflow-hidden cursor-pointer"
-          onClick={() => onServiceClick(service)}
-        >
-          <div className="flex gap-4 p-4">
-            <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
-              <img
-                src={service.portfolio_images?.[0] || "/placeholder.svg"}
-                alt={service.name_ar}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="flex-1 text-right">
-              <h3 className="font-display text-lg font-bold text-foreground mb-1">
-                {service.name_ar}
-              </h3>
-              <div className="flex items-center justify-end gap-2 mb-2">
-                <span className="text-sm font-semibold">{Number(service.rating)?.toFixed(1) || '0.0'}</span>
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                {service.city && (
-                  <>
-                    <span className="text-muted-foreground">•</span>
-                    <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                      <span>{service.city}</span>
-                      <MapPin className="w-3.5 h-3.5" />
+      {Object.entries(groupedServices).map(([categoryId, { category, services: categoryServices }], groupIndex) => {
+        const Icon = category?.icon || Scissors;
+        const isOpen = openCategories[categoryId] ?? true;
+        
+        return (
+          <motion.div
+            key={categoryId}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: groupIndex * 0.1 }}
+            className="overflow-hidden"
+          >
+            <Collapsible open={isOpen} onOpenChange={() => toggleCategory(categoryId)}>
+              {/* Category Header */}
+              <CollapsibleTrigger asChild>
+                <button className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-all ${
+                  category ? `bg-gradient-to-r ${category.color} text-white` : 'bg-muted'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                      {categoryServices.length}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-display font-bold text-lg">
+                      {category?.nameAr || categoryId}
+                    </span>
+                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                      <Icon className="w-5 h-5" />
                     </div>
-                  </>
-                )}
-              </div>
-              <p className="text-muted-foreground text-sm line-clamp-2 font-arabic">
-                {service.description}
-              </p>
-            </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(service.id);
-              }}
-              className="self-start w-9 h-9 bg-red-50 rounded-full flex items-center justify-center hover:bg-red-100 transition-colors"
-            >
-              <Heart className="w-4 h-4 text-red-500 fill-red-500" />
-            </button>
-          </div>
-        </motion.div>
-      ))}
+                  </div>
+                </button>
+              </CollapsibleTrigger>
+              
+              {/* Services List */}
+              <CollapsibleContent>
+                <div className="space-y-3 pr-2">
+                  {categoryServices.map((service, index) => (
+                    <motion.div
+                      key={service.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="card-luxe rounded-xl overflow-hidden cursor-pointer"
+                      onClick={() => onServiceClick(service)}
+                    >
+                      <div className="flex gap-3 p-3">
+                        <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={service.portfolio_images?.[0] || "/placeholder.svg"}
+                            alt={service.name_ar}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 text-right min-w-0">
+                          <h3 className="font-display text-base font-bold text-foreground mb-1 truncate">
+                            {service.name_ar}
+                          </h3>
+                          <div className="flex items-center justify-end gap-2 mb-1">
+                            <span className="text-sm font-semibold">{Number(service.rating)?.toFixed(1) || '0.0'}</span>
+                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                            {service.city && (
+                              <>
+                                <span className="text-muted-foreground text-xs">•</span>
+                                <div className="flex items-center gap-1 text-muted-foreground text-xs">
+                                  <span>{service.city}</span>
+                                  <MapPin className="w-3 h-3" />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <p className="text-muted-foreground text-xs line-clamp-1 font-arabic">
+                            {service.description}
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemove(service.id);
+                          }}
+                          className="self-center w-8 h-8 bg-red-50 rounded-full flex items-center justify-center hover:bg-red-100 transition-colors flex-shrink-0"
+                        >
+                          <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
