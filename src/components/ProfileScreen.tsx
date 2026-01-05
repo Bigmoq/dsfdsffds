@@ -9,6 +9,7 @@ import { VendorDashboard } from "./VendorDashboard";
 import { MyBookings } from "./MyBookings";
 import { AdminPanel } from "./AdminPanel";
 import { NotificationsSheet } from "./NotificationsSheet";
+import { SettingsSheet } from "./SettingsSheet";
 import { toast } from "sonner";
 
 export function ProfileScreen() {
@@ -19,11 +20,12 @@ export function ProfileScreen() {
   const [showMyBookings, setShowMyBookings] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const menuItems = [
     { icon: User, label: "الملف الشخصي", labelEn: "Profile", action: () => toast.info("قريباً - الملف الشخصي") },
     { icon: Bell, label: "الإشعارات", labelEn: "Notifications", action: () => setShowNotifications(true) },
-    { icon: Settings, label: "الإعدادات", labelEn: "Settings", action: () => toast.info("قريباً - الإعدادات") },
+    { icon: Settings, label: "الإعدادات", labelEn: "Settings", action: () => setShowSettings(true) },
     { icon: HelpCircle, label: "المساعدة", labelEn: "Help", action: () => toast.info("قريباً - المساعدة") },
   ];
 
@@ -364,6 +366,11 @@ export function ProfileScreen() {
       <NotificationsSheet
         open={showNotifications}
         onOpenChange={setShowNotifications}
+      />
+      
+      <SettingsSheet
+        open={showSettings}
+        onOpenChange={setShowSettings}
       />
     </div>
   );
