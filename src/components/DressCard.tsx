@@ -1,16 +1,29 @@
-import { MapPin, Sparkles, Tag, Heart } from "lucide-react";
+import { MapPin, Sparkles, Tag, Heart, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Dress } from "@/data/weddingData";
 import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { ar } from "date-fns/locale";
 
 interface DressCardProps {
-  dress: Dress & { condition?: string };
+  dress: Dress & { condition?: string; created_at?: string };
   onClick: () => void;
+}
+
+function getTimeAgo(dateString?: string): string {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    return formatDistanceToNow(date, { addSuffix: true, locale: ar });
+  } catch {
+    return "";
+  }
 }
 
 export function DressCard({ dress, onClick }: DressCardProps) {
   const [isLiked, setIsLiked] = useState(false);
   const isNew = dress.condition === 'new';
+  const timeAgo = getTimeAgo((dress as any).created_at);
 
   const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -82,6 +95,12 @@ export function DressCard({ dress, onClick }: DressCardProps) {
             <MapPin className="w-3 h-3" />
           </span>
         </div>
+        {timeAgo && (
+          <div className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground/70">
+            <span>{timeAgo}</span>
+            <Clock className="w-3 h-3" />
+          </div>
+        )}
       </div>
     </motion.div>
   );
