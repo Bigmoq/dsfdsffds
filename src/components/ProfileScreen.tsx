@@ -8,13 +8,8 @@ import { VendorApplicationSheet } from "./VendorApplicationSheet";
 import { VendorDashboard } from "./VendorDashboard";
 import { MyBookings } from "./MyBookings";
 import { AdminPanel } from "./AdminPanel";
-
-const menuItems = [
-  { icon: User, label: "الملف الشخصي", labelEn: "Profile" },
-  { icon: Bell, label: "الإشعارات", labelEn: "Notifications" },
-  { icon: Settings, label: "الإعدادات", labelEn: "Settings" },
-  { icon: HelpCircle, label: "المساعدة", labelEn: "Help" },
-];
+import { NotificationsSheet } from "./NotificationsSheet";
+import { toast } from "sonner";
 
 export function ProfileScreen() {
   const navigate = useNavigate();
@@ -23,6 +18,14 @@ export function ProfileScreen() {
   const [showVendorDashboard, setShowVendorDashboard] = useState(false);
   const [showMyBookings, setShowMyBookings] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const menuItems = [
+    { icon: User, label: "الملف الشخصي", labelEn: "Profile", action: () => toast.info("قريباً - الملف الشخصي") },
+    { icon: Bell, label: "الإشعارات", labelEn: "Notifications", action: () => setShowNotifications(true) },
+    { icon: Settings, label: "الإعدادات", labelEn: "Settings", action: () => toast.info("قريباً - الإعدادات") },
+    { icon: HelpCircle, label: "المساعدة", labelEn: "Help", action: () => toast.info("قريباً - المساعدة") },
+  ];
 
   const handleLogout = async () => {
     await signOut();
@@ -319,6 +322,7 @@ export function ProfileScreen() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 }}
+              onClick={item.action}
               className="w-full card-luxe rounded-xl p-4 flex items-center justify-between hover:shadow-lg transition-shadow"
             >
               <ChevronLeft className="w-5 h-5 text-muted-foreground" />
@@ -355,6 +359,11 @@ export function ProfileScreen() {
       <VendorApplicationSheet
         open={showVendorSheet}
         onOpenChange={setShowVendorSheet}
+      />
+      
+      <NotificationsSheet
+        open={showNotifications}
+        onOpenChange={setShowNotifications}
       />
     </div>
   );
