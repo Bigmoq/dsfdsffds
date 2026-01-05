@@ -5,7 +5,8 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { 
   CalendarDays, User, Package, Clock, CheckCircle, XCircle, 
-  Loader2, MessageCircle, Phone, FileText, ChevronDown
+  Loader2, MessageCircle, Phone, FileText, ChevronDown, RefreshCw,
+  Ban, RotateCcw, CheckCircle2, Tag, Percent
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,12 +14,32 @@ import { useServiceBookingNotifications } from "@/hooks/useServiceBookingNotific
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface ServiceBooking {
@@ -49,13 +70,17 @@ export function ServiceBookingManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expandedBooking, setExpandedBooking] = useState<string | null>(null);
+  
+  // Dialog states
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [resaleDialogOpen, setResaleDialogOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<BookingWithProfile | null>(null);
+  const [resaleDiscount, setResaleDiscount] = useState<number>(10);
 
-  // Handle new booking notification - refresh data
   const handleNewBooking = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['service-bookings'] });
   }, [queryClient]);
 
-  // Fetch user's service providers
   const { data: providers } = useQuery({
     queryKey: ['my-service-providers', user?.id],
     queryFn: async () => {
@@ -70,14 +95,11 @@ export function ServiceBookingManagement() {
     enabled: !!user?.id,
   });
 
-  // Get provider IDs for realtime notifications
   const providerIds = providers?.map(p => p.id) || [];
 
-  // Subscribe to real-time booking notifications
   useServiceBookingNotifications({ providerIds, onNewBooking: handleNewBooking });
 
-  // Fetch bookings for user's service providers
-  const { data: bookings, isLoading } = useQuery({
+  const { data: bookings, isLoading, refetch } = useQuery({
     queryKey: ['service-bookings', providers?.map(p => p.id)],
     queryFn: async () => {
       if (!providers?.length) return [];
@@ -98,7 +120,6 @@ export function ServiceBookingManagement() {
       
       if (error) throw error;
       
-      // Fetch user profiles separately
       const userIds = [...new Set((data || []).map(b => b.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
@@ -115,7 +136,6 @@ export function ServiceBookingManagement() {
     enabled: !!providers?.length,
   });
 
-  // Update booking status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: string; status: string }) => {
       const { error } = await supabase
@@ -140,6 +160,54 @@ export function ServiceBookingManagement() {
       });
     },
   });
+
+  const handleCancelBooking = async () => {
+    if (!selectedBooking) return;
+    
+    updateStatusMutation.mutate({ bookingId: selectedBooking.id, status: 'cancelled' });
+    
+    // Update provider availability
+    if (selectedBooking.provider_id) {
+      await supabase
+        .from("service_provider_availability")
+        .upsert({
+          provider_id: selectedBooking.provider_id,
+          date: selectedBooking.booking_date,
+          status: "available",
+          notes: "تم إلغاء الحجز السابق"
+        }, { onConflict: 'provider_id,date' });
+    }
+    
+    setCancelDialogOpen(false);
+    setSelectedBooking(null);
+  };
+
+  const handleResaleBooking = async () => {
+    if (!selectedBooking) return;
+    
+    // Update provider availability to show discount
+    if (selectedBooking.provider_id) {
+      await supabase
+        .from("service_provider_availability")
+        .upsert({
+          provider_id: selectedBooking.provider_id,
+          date: selectedBooking.booking_date,
+          status: "available",
+          notes: `إعادة بيع بخصم ${resaleDiscount}%`
+        }, { onConflict: 'provider_id,date' });
+    }
+    
+    updateStatusMutation.mutate({ bookingId: selectedBooking.id, status: 'cancelled' });
+    
+    toast({
+      title: "تم عرض الموعد للبيع",
+      description: `سيظهر الموعد للعملاء بخصم ${resaleDiscount}%`,
+    });
+    
+    setResaleDialogOpen(false);
+    setSelectedBooking(null);
+    setResaleDiscount(10);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -193,6 +261,9 @@ export function ServiceBookingManagement() {
                     <span>{format(new Date(booking.booking_date), 'dd MMM yyyy', { locale: ar })}</span>
                     <CalendarDays className="w-4 h-4" />
                   </div>
+                  <div className="flex items-center justify-end gap-2 mt-2">
+                    <span className="font-bold text-primary">{booking.total_price.toLocaleString()} ر.س</span>
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -205,9 +276,6 @@ export function ServiceBookingManagement() {
                 <div className="flex items-center justify-end gap-2">
                   <span className="text-sm">{booking.service_packages?.name_ar || 'باقة غير محددة'}</span>
                   <Package className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex items-center justify-end gap-2">
-                  <span className="text-sm font-bold text-primary">{booking.total_price.toLocaleString()} ر.س</span>
                 </div>
                 {booking.notes && (
                   <div className="flex items-start justify-end gap-2 pt-2 border-t">
@@ -271,19 +339,56 @@ export function ServiceBookingManagement() {
                 </div>
               )}
 
-              {/* Complete button for confirmed bookings */}
+              {/* Actions for confirmed bookings */}
               {booking.status === 'confirmed' && (
-                <div className="pt-2 border-t">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'completed' })}
-                    disabled={updateStatusMutation.isPending}
-                  >
-                    <CheckCircle className="w-4 h-4 ml-1" />
-                    تحديد كمكتمل
-                  </Button>
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setResaleDialogOpen(true);
+                      }}
+                    >
+                      <Tag className="w-4 h-4 ml-1" />
+                      إعادة بيع
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-red-500/30 text-red-600 hover:bg-red-500/10"
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setCancelDialogOpen(true);
+                      }}
+                    >
+                      <Ban className="w-4 h-4 ml-1" />
+                      إلغاء
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'pending' })}
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      <RotateCcw className="w-4 h-4 ml-1" />
+                      إعادة للمراجعة
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'completed' })}
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      <CheckCircle2 className="w-4 h-4 ml-1" />
+                      تحديد كمكتمل
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -303,17 +408,25 @@ export function ServiceBookingManagement() {
 
   return (
     <div className="space-y-4">
+      {/* Header with refresh */}
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="icon" onClick={() => refetch()}>
+          <RefreshCw className="w-5 h-5" />
+        </Button>
+        <h2 className="font-display text-xl font-bold">إدارة الحجوزات</h2>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="p-3 text-center">
+        <Card className="p-3 text-center bg-amber-500/10">
           <div className="text-2xl font-bold text-amber-600">{pendingBookings.length}</div>
           <div className="text-xs text-muted-foreground">قيد الانتظار</div>
         </Card>
-        <Card className="p-3 text-center">
+        <Card className="p-3 text-center bg-green-500/10">
           <div className="text-2xl font-bold text-green-600">{confirmedBookings.length}</div>
           <div className="text-xs text-muted-foreground">مؤكد</div>
         </Card>
-        <Card className="p-3 text-center">
+        <Card className="p-3 text-center bg-blue-500/10">
           <div className="text-2xl font-bold text-blue-600">{completedBookings.length}</div>
           <div className="text-xs text-muted-foreground">مكتمل</div>
         </Card>
@@ -394,6 +507,98 @@ export function ServiceBookingManagement() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد إلغاء الحجز</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من إلغاء هذا الحجز؟ سيتم إشعار العميل بالإلغاء وسيصبح الموعد متاحاً للحجز مرة أخرى.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600"
+              onClick={handleCancelBooking}
+            >
+              تأكيد الإلغاء
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resale Dialog */}
+      <Dialog open={resaleDialogOpen} onOpenChange={setResaleDialogOpen}>
+        <DialogContent dir="rtl" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="w-5 h-5 text-primary" />
+              إعادة بيع الحجز
+            </DialogTitle>
+            <DialogDescription>
+              سيتم إلغاء الحجز الحالي وعرض الموعد للعملاء بسعر مخفض
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold">{selectedBooking?.service_packages?.name_ar || 'خدمة'}</span>
+                <Package className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>{format(new Date(selectedBooking?.booking_date || new Date()), "d MMMM yyyy", { locale: ar })}</span>
+                <CalendarDays className="w-4 h-4" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-primary">{selectedBooking?.total_price?.toLocaleString()} ر.س</span>
+                <span className="text-sm text-muted-foreground">السعر الأصلي</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="discount" className="text-right block">نسبة الخصم</Label>
+              <div className="relative">
+                <Input
+                  id="discount"
+                  type="number"
+                  min={5}
+                  max={50}
+                  value={resaleDiscount}
+                  onChange={(e) => setResaleDiscount(Number(e.target.value))}
+                  className="pl-10 text-right"
+                />
+                <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground text-right">
+                السعر بعد الخصم: {((selectedBooking?.total_price || 0) * (1 - resaleDiscount / 100)).toLocaleString()} ر.س
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => setResaleDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button 
+              onClick={handleResaleBooking}
+              disabled={updateStatusMutation.isPending}
+              className="gold-gradient"
+            >
+              {updateStatusMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 ml-2" />
+                  عرض للبيع
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
