@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       dresses: {
         Row: {
+          category: string | null
           city: string
           condition: string | null
           created_at: string | null
@@ -32,6 +33,7 @@ export type Database = {
           whatsapp_enabled: boolean | null
         }
         Insert: {
+          category?: string | null
           city: string
           condition?: string | null
           created_at?: string | null
@@ -48,6 +50,7 @@ export type Database = {
           whatsapp_enabled?: boolean | null
         }
         Update: {
+          category?: string | null
           city?: string
           condition?: string | null
           created_at?: string | null
