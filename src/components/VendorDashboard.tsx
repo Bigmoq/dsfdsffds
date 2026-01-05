@@ -22,9 +22,9 @@ export function VendorDashboard() {
     if (user && role) {
       setLoading(false);
       
-      // Check if this is the first time for hall_owner
-      if (role === "hall_owner") {
-        const welcomeKey = `vendor_welcome_seen_${user.id}`;
+      // Check if this is the first time for any vendor type
+      if (role === "hall_owner" || role === "service_provider" || role === "dress_seller") {
+        const welcomeKey = `vendor_welcome_seen_${user.id}_${role}`;
         const hasSeenWelcome = localStorage.getItem(welcomeKey);
         
         if (!hasSeenWelcome) {
@@ -39,8 +39,8 @@ export function VendorDashboard() {
   }, [user, role]);
 
   const handleWelcomeComplete = () => {
-    if (user) {
-      const welcomeKey = `vendor_welcome_seen_${user.id}`;
+    if (user && role) {
+      const welcomeKey = `vendor_welcome_seen_${user.id}_${role}`;
       localStorage.setItem(welcomeKey, "true");
     }
     setShowWelcome(false);
@@ -55,8 +55,8 @@ export function VendorDashboard() {
     );
   }
 
-  if (showWelcome && role === "hall_owner") {
-    return <VendorWelcome onComplete={handleWelcomeComplete} />;
+  if (showWelcome && (role === "hall_owner" || role === "service_provider" || role === "dress_seller")) {
+    return <VendorWelcome onComplete={handleWelcomeComplete} vendorType={role} />;
   }
 
   if (activeView === "hall_owner") {
