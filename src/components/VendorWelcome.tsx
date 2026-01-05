@@ -8,38 +8,103 @@ import {
   Bell, 
   CheckCircle2,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  Users,
+  Camera,
+  Star,
+  ShoppingBag,
+  Tag,
+  MessageCircle
 } from "lucide-react";
+
+type VendorType = "hall_owner" | "service_provider" | "dress_seller";
 
 interface VendorWelcomeProps {
   onComplete: () => void;
+  vendorType: VendorType;
 }
 
-const features = [
-  {
-    icon: Building2,
-    title: "إدارة القاعات",
-    description: "أضف قاعاتك بسهولة مع الصور والتفاصيل والأسعار"
+const featuresByType = {
+  hall_owner: {
+    welcomeMessage: "أنت الآن مقدم قاعات معتمد",
+    features: [
+      {
+        icon: Building2,
+        title: "إدارة القاعات",
+        description: "أضف قاعاتك بسهولة مع الصور والتفاصيل والأسعار"
+      },
+      {
+        icon: Calendar,
+        title: "تقويم الحجوزات",
+        description: "تحكم في التواريخ المتاحة وإدارة الحجوزات"
+      },
+      {
+        icon: BarChart3,
+        title: "تحليلات متقدمة",
+        description: "تابع أداء قاعاتك والإيرادات والاتجاهات"
+      },
+      {
+        icon: Bell,
+        title: "إشعارات فورية",
+        description: "احصل على تنبيهات عند وصول حجوزات جديدة"
+      }
+    ]
   },
-  {
-    icon: Calendar,
-    title: "تقويم الحجوزات",
-    description: "تحكم في التواريخ المتاحة وإدارة الحجوزات"
+  service_provider: {
+    welcomeMessage: "أنت الآن مقدم خدمات معتمد",
+    features: [
+      {
+        icon: Users,
+        title: "إدارة الخدمات",
+        description: "أضف خدماتك وباقاتك مع الأسعار والتفاصيل"
+      },
+      {
+        icon: Camera,
+        title: "معرض الأعمال",
+        description: "اعرض أعمالك السابقة لجذب المزيد من العملاء"
+      },
+      {
+        icon: Calendar,
+        title: "تقويم المواعيد",
+        description: "تحكم في أيام العمل وإدارة الحجوزات"
+      },
+      {
+        icon: Star,
+        title: "التقييمات والمراجعات",
+        description: "احصل على تقييمات العملاء لبناء سمعتك"
+      }
+    ]
   },
-  {
-    icon: BarChart3,
-    title: "تحليلات متقدمة",
-    description: "تابع أداء قاعاتك والإيرادات والاتجاهات"
-  },
-  {
-    icon: Bell,
-    title: "إشعارات فورية",
-    description: "احصل على تنبيهات عند وصول حجوزات جديدة"
+  dress_seller: {
+    welcomeMessage: "أنت الآن بائع فساتين معتمد",
+    features: [
+      {
+        icon: ShoppingBag,
+        title: "إدارة الفساتين",
+        description: "أضف فساتينك مع الصور والمقاسات والأسعار"
+      },
+      {
+        icon: Tag,
+        title: "تحديد الأسعار",
+        description: "تحكم في أسعار فساتينك وحالتها"
+      },
+      {
+        icon: MessageCircle,
+        title: "التواصل المباشر",
+        description: "تواصل مع المشترين عبر واتساب"
+      },
+      {
+        icon: Bell,
+        title: "إشعارات فورية",
+        description: "احصل على تنبيهات عند اهتمام المشترين"
+      }
+    ]
   }
-];
+};
 
-export const VendorWelcome = ({ onComplete }: VendorWelcomeProps) => {
+export const VendorWelcome = ({ onComplete, vendorType }: VendorWelcomeProps) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const { welcomeMessage, features } = featuresByType[vendorType];
 
   const handleNext = () => {
     if (currentStep < features.length - 1) {
@@ -105,7 +170,7 @@ export const VendorWelcome = ({ onComplete }: VendorWelcomeProps) => {
                   مرحباً بك! 🎉
                 </h1>
                 <p className="text-muted-foreground font-arabic text-lg">
-                  أنت الآن مقدم قاعات معتمد
+                  {welcomeMessage}
                 </p>
               </motion.div>
             )}
