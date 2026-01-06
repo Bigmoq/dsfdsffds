@@ -17,13 +17,13 @@ import { Loader2 } from "lucide-react";
 const Index = () => {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(2); // Default to Home (center)
-  const { user, isVendor, isAdmin, loading } = useAuth();
+  const { user, isVendor, isAdmin, loading, role } = useAuth();
   
   // Check if admin param is present
   const adminParam = searchParams.get("admin") === "true";
 
-  // Show loading while checking auth
-  if (loading) {
+  // Show loading while checking auth OR when admin param is set but role not loaded yet
+  if (loading || (adminParam && user && role === null)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
