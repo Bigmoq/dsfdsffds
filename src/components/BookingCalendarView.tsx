@@ -9,7 +9,8 @@ import { ar } from "date-fns/locale";
 import { 
   ChevronLeft, ChevronRight, CalendarDays, User, Users, Package, 
   Loader2, Phone, MessageCircle, Clock, CreditCard, Check, X, 
-  Ban, Tag, RotateCcw, CheckCircle2, Edit, DollarSign, AlertCircle, Plus
+  Ban, Tag, RotateCcw, CheckCircle2, Edit, DollarSign, AlertCircle, Plus,
+  Trash2, ExternalLink
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -86,6 +87,8 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
   
   // External booking state
   const [addExternalOpen, setAddExternalOpen] = useState(false);
+  const [editExternalMode, setEditExternalMode] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [externalBooking, setExternalBooking] = useState({
     customerName: "",
     phone: "",
@@ -396,6 +399,142 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
     } catch (error) {
       toast({ title: "خطأ", description: "فشل إضافة الحجز", variant: "destructive" });
     }
+  };
+
+  // Check if booking is external (user_id matches owner)
+  const isExternalBooking = (booking: Booking): boolean => {
+    return booking.notes?.includes("حجز خارجي -") || false;
+  };
+
+  // Parse external booking data from notes
+  const parseExternalBookingData = (booking: Booking) => {
+    const notes = booking.notes || "";
+    const lines = notes.split("\n");
+    const firstLine = lines[0] || "";
+    
+    // Extract customer name and phone from "حجز خارجي - الاسم - الرقم"
+    const match = firstLine.match(/حجز خارجي - ([^-]+)(?:\s*-\s*(.+))?/);
+    const customerName = match?.[1]?.trim() || "";
+    const phone = match?.[2]?.trim() || "";
+    const remainingNotes = lines.slice(1).join("\n").trim();
+    
+    return { customerName, phone, remainingNotes };
+  };
+
+  // Open edit dialog for external booking
+  const handleEditExternalBooking = (booking: Booking) => {
+    const { customerName, phone, remainingNotes } = parseExternalBookingData(booking);
+    const hallBooking = booking as HallBooking;
+    
+    setExternalBooking({
+      customerName,
+      phone,
+      bookingDate: booking.booking_date,
+      totalPrice: String(booking.total_price || ""),
+      notes: remainingNotes,
+      depositPaid: type === "hall" && hallBooking.stripe_payment_id !== null,
+      guestCountMen: String(hallBooking.guest_count_men || ""),
+      guestCountWomen: String(hallBooking.guest_count_women || ""),
+    });
+    setEditExternalMode(true);
+    setAddExternalOpen(true);
+    setEditDialogOpen(false);
+  };
+
+  // Update external booking
+  const handleUpdateExternalBooking = async () => {
+    if (!selectedBooking || !externalBooking.customerName || !externalBooking.bookingDate) {
+      toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const table = type === "hall" ? "hall_bookings" : "service_bookings";
+      const notesText = `حجز خارجي - ${externalBooking.customerName}${externalBooking.phone ? ` - ${externalBooking.phone}` : ""}${externalBooking.notes ? `\n${externalBooking.notes}` : ""}`;
+
+      const updates: Record<string, unknown> = {
+        booking_date: externalBooking.bookingDate,
+        total_price: parseInt(externalBooking.totalPrice) || 0,
+        notes: notesText,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (type === "hall") {
+        updates.guest_count_men = parseInt(externalBooking.guestCountMen) || 0;
+        updates.guest_count_women = parseInt(externalBooking.guestCountWomen) || 0;
+        updates.stripe_payment_id = externalBooking.depositPaid ? "external_deposit" : null;
+      }
+
+      const { error } = await supabase
+        .from(table)
+        .update(updates)
+        .eq("id", selectedBooking.id);
+
+      if (error) throw error;
+
+      toast({ title: "تم التحديث", description: "تم تحديث الحجز الخارجي بنجاح" });
+      resetExternalForm();
+      refetch();
+    } catch (error) {
+      toast({ title: "خطأ", description: "فشل تحديث الحجز", variant: "destructive" });
+    }
+  };
+
+  // Delete external booking
+  const handleDeleteExternalBooking = async () => {
+    if (!selectedBooking) return;
+
+    try {
+      const table = type === "hall" ? "hall_bookings" : "service_bookings";
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq("id", selectedBooking.id);
+
+      if (error) throw error;
+
+      // Also delete availability
+      if (type === "hall") {
+        const hallBooking = selectedBooking as HallBooking;
+        await supabase
+          .from("hall_availability")
+          .delete()
+          .eq("hall_id", hallBooking.hall_id)
+          .eq("date", selectedBooking.booking_date);
+      } else {
+        const serviceBooking = selectedBooking as ServiceBooking;
+        await supabase
+          .from("service_provider_availability")
+          .delete()
+          .eq("provider_id", serviceBooking.provider_id)
+          .eq("date", selectedBooking.booking_date);
+      }
+
+      toast({ title: "تم الحذف", description: "تم حذف الحجز بنجاح" });
+      setDeleteConfirmOpen(false);
+      setEditDialogOpen(false);
+      setSelectedBooking(null);
+      refetch();
+    } catch (error) {
+      toast({ title: "خطأ", description: "فشل حذف الحجز", variant: "destructive" });
+    }
+  };
+
+  // Reset external form
+  const resetExternalForm = () => {
+    setAddExternalOpen(false);
+    setEditExternalMode(false);
+    setSelectedBooking(null);
+    setExternalBooking({
+      customerName: "",
+      phone: "",
+      bookingDate: "",
+      totalPrice: "",
+      notes: "",
+      depositPaid: false,
+      guestCountMen: "",
+      guestCountWomen: "",
+    });
   };
 
   const handleWhatsApp = (phone: string | null, info: string) => {
@@ -874,6 +1013,38 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
                   إعادة للمراجعة
                 </Button>
               )}
+
+              {/* External Booking Actions */}
+              {isExternalBooking(selectedBooking) && (
+                <div className="flex gap-2 pt-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleEditExternalBooking(selectedBooking)}
+                  >
+                    <Edit className="w-4 h-4 ml-1" />
+                    تعديل الحجز
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 border-red-500/30 text-red-600 hover:bg-red-500/10"
+                    onClick={() => setDeleteConfirmOpen(true)}
+                  >
+                    <Trash2 className="w-4 h-4 ml-1" />
+                    حذف
+                  </Button>
+                </div>
+              )}
+
+              {/* External Booking Indicator */}
+              {isExternalBooking(selectedBooking) && (
+                <div className="flex items-center justify-center gap-2 p-2 bg-blue-500/10 rounded-lg text-sm text-blue-600">
+                  <ExternalLink className="w-4 h-4" />
+                  <span>حجز خارجي</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -946,16 +1117,28 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Add External Booking Dialog */}
-      <Dialog open={addExternalOpen} onOpenChange={setAddExternalOpen}>
+      {/* Add/Edit External Booking Dialog */}
+      <Dialog open={addExternalOpen} onOpenChange={(open) => {
+        if (!open) resetExternalForm();
+        else setAddExternalOpen(open);
+      }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5 text-primary" />
-              إضافة حجز خارجي
+              {editExternalMode ? (
+                <>
+                  <Edit className="w-5 h-5 text-primary" />
+                  تعديل حجز خارجي
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5 text-primary" />
+                  إضافة حجز خارجي
+                </>
+              )}
             </DialogTitle>
             <DialogDescription>
-              أضف حجز من خارج التطبيق للتقويم
+              {editExternalMode ? "قم بتعديل بيانات الحجز الخارجي" : "أضف حجز من خارج التطبيق للتقويم"}
             </DialogDescription>
           </DialogHeader>
 
@@ -1057,12 +1240,49 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
           </div>
 
           <DialogFooter className="flex-row-reverse gap-2">
-            <Button variant="outline" onClick={() => setAddExternalOpen(false)}>
+            <Button variant="outline" onClick={resetExternalForm}>
               إلغاء
             </Button>
-            <Button onClick={handleAddExternalBooking}>
-              <Plus className="w-4 h-4 ml-1" />
-              إضافة الحجز
+            <Button onClick={editExternalMode ? handleUpdateExternalBooking : handleAddExternalBooking}>
+              {editExternalMode ? (
+                <>
+                  <Check className="w-4 h-4 ml-1" />
+                  حفظ التعديلات
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 ml-1" />
+                  إضافة الحجز
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />
+              تأكيد الحذف
+            </DialogTitle>
+            <DialogDescription>
+              هل أنت متأكد من حذف هذا الحجز؟ لا يمكن التراجع عن هذا الإجراء.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteExternalBooking}
+            >
+              <Trash2 className="w-4 h-4 ml-1" />
+              تأكيد الحذف
             </Button>
           </DialogFooter>
         </DialogContent>
