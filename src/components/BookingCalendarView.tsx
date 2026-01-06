@@ -9,7 +9,7 @@ import { ar } from "date-fns/locale";
 import { 
   ChevronLeft, ChevronRight, CalendarDays, User, Users, Package, 
   Loader2, Phone, MessageCircle, Clock, CreditCard, Check, X, 
-  Ban, Tag, RotateCcw, CheckCircle2, Edit, DollarSign, AlertCircle
+  Ban, Tag, RotateCcw, CheckCircle2, Edit, DollarSign, AlertCircle, Plus
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -83,6 +83,19 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
   const [resaleDiscount, setResaleDiscount] = useState(10);
   const [depositPaid, setDepositPaid] = useState(false);
   const [editNotes, setEditNotes] = useState("");
+  
+  // External booking state
+  const [addExternalOpen, setAddExternalOpen] = useState(false);
+  const [externalBooking, setExternalBooking] = useState({
+    customerName: "",
+    phone: "",
+    bookingDate: "",
+    totalPrice: "",
+    notes: "",
+    depositPaid: false,
+    guestCountMen: "",
+    guestCountWomen: "",
+  });
 
   const today = startOfDay(new Date());
 
@@ -316,6 +329,75 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
     setResaleDiscount(10);
   };
 
+  // Add external booking
+  const handleAddExternalBooking = async () => {
+    if (!externalBooking.customerName || !externalBooking.bookingDate || !entities?.length) {
+      toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة", variant: "destructive" });
+      return;
+    }
+
+    const entityId = entities[0].id;
+
+    try {
+      if (type === "hall") {
+        const { error } = await supabase.from("hall_bookings").insert({
+          hall_id: entityId,
+          user_id: user?.id!,
+          booking_date: externalBooking.bookingDate,
+          status: "accepted",
+          total_price: parseInt(externalBooking.totalPrice) || 0,
+          notes: `حجز خارجي - ${externalBooking.customerName}${externalBooking.phone ? ` - ${externalBooking.phone}` : ""}${externalBooking.notes ? `\n${externalBooking.notes}` : ""}`,
+          guest_count_men: parseInt(externalBooking.guestCountMen) || 0,
+          guest_count_women: parseInt(externalBooking.guestCountWomen) || 0,
+          stripe_payment_id: externalBooking.depositPaid ? "external_deposit" : null,
+        });
+        if (error) throw error;
+
+        // Update availability
+        await supabase.from("hall_availability").upsert({
+          hall_id: entityId,
+          date: externalBooking.bookingDate,
+          status: "booked" as const,
+          notes: `حجز خارجي - ${externalBooking.customerName}`,
+        }, { onConflict: "hall_id,date" });
+      } else {
+        const { error } = await supabase.from("service_bookings").insert({
+          provider_id: entityId,
+          user_id: user?.id!,
+          booking_date: externalBooking.bookingDate,
+          status: "confirmed",
+          total_price: parseInt(externalBooking.totalPrice) || 0,
+          notes: `حجز خارجي - ${externalBooking.customerName}${externalBooking.phone ? ` - ${externalBooking.phone}` : ""}${externalBooking.notes ? `\n${externalBooking.notes}` : ""}`,
+        });
+        if (error) throw error;
+
+        // Update availability
+        await supabase.from("service_provider_availability").upsert({
+          provider_id: entityId,
+          date: externalBooking.bookingDate,
+          status: "booked" as const,
+          notes: `حجز خارجي - ${externalBooking.customerName}`,
+        }, { onConflict: "provider_id,date" });
+      }
+
+      toast({ title: "تم الإضافة", description: "تم إضافة الحجز الخارجي بنجاح" });
+      setAddExternalOpen(false);
+      setExternalBooking({
+        customerName: "",
+        phone: "",
+        bookingDate: "",
+        totalPrice: "",
+        notes: "",
+        depositPaid: false,
+        guestCountMen: "",
+        guestCountWomen: "",
+      });
+      refetch();
+    } catch (error) {
+      toast({ title: "خطأ", description: "فشل إضافة الحجز", variant: "destructive" });
+    }
+  };
+
   const handleWhatsApp = (phone: string | null, info: string) => {
     if (!phone) return;
     const message = encodeURIComponent(`مرحباً، بخصوص حجزك: ${info}`);
@@ -371,13 +453,23 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
 
       {/* Calendar Header */}
       <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setAddExternalOpen(true)}
+            className="gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            حجز خارجي
+          </Button>
+        </div>
 
         <h2 className="font-display text-lg font-bold text-foreground">
           {format(currentMonth, "MMMM yyyy", { locale: ar })}
@@ -849,6 +941,128 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
               ) : (
                 "تأكيد إعادة البيع"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add External Booking Dialog */}
+      <Dialog open={addExternalOpen} onOpenChange={setAddExternalOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5 text-primary" />
+              إضافة حجز خارجي
+            </DialogTitle>
+            <DialogDescription>
+              أضف حجز من خارج التطبيق للتقويم
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Customer Name */}
+            <div className="space-y-2">
+              <Label>اسم العميل *</Label>
+              <Input
+                value={externalBooking.customerName}
+                onChange={(e) => setExternalBooking(prev => ({ ...prev, customerName: e.target.value }))}
+                placeholder="أدخل اسم العميل"
+                className="text-right"
+              />
+            </div>
+
+            {/* Phone */}
+            <div className="space-y-2">
+              <Label>رقم الجوال</Label>
+              <Input
+                value={externalBooking.phone}
+                onChange={(e) => setExternalBooking(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="05xxxxxxxx"
+                className="text-right"
+                dir="ltr"
+              />
+            </div>
+
+            {/* Booking Date */}
+            <div className="space-y-2">
+              <Label>تاريخ الحجز *</Label>
+              <Input
+                type="date"
+                value={externalBooking.bookingDate}
+                onChange={(e) => setExternalBooking(prev => ({ ...prev, bookingDate: e.target.value }))}
+                className="text-right"
+              />
+            </div>
+
+            {/* Total Price */}
+            <div className="space-y-2">
+              <Label>السعر الإجمالي</Label>
+              <Input
+                type="number"
+                value={externalBooking.totalPrice}
+                onChange={(e) => setExternalBooking(prev => ({ ...prev, totalPrice: e.target.value }))}
+                placeholder="0"
+                className="text-right"
+              />
+            </div>
+
+            {/* Guest Count for Halls */}
+            {type === "hall" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>عدد الرجال</Label>
+                  <Input
+                    type="number"
+                    value={externalBooking.guestCountMen}
+                    onChange={(e) => setExternalBooking(prev => ({ ...prev, guestCountMen: e.target.value }))}
+                    placeholder="0"
+                    className="text-right"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>عدد النساء</Label>
+                  <Input
+                    type="number"
+                    value={externalBooking.guestCountWomen}
+                    onChange={(e) => setExternalBooking(prev => ({ ...prev, guestCountWomen: e.target.value }))}
+                    placeholder="0"
+                    className="text-right"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Deposit Status */}
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
+              <Switch
+                checked={externalBooking.depositPaid}
+                onCheckedChange={(checked) => setExternalBooking(prev => ({ ...prev, depositPaid: checked }))}
+              />
+              <div className="flex items-center gap-2">
+                <span className="font-medium">تم دفع العربون</span>
+                <DollarSign className={cn("w-5 h-5", externalBooking.depositPaid ? "text-green-500" : "text-muted-foreground")} />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label>ملاحظات</Label>
+              <Textarea
+                value={externalBooking.notes}
+                onChange={(e) => setExternalBooking(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="أضف ملاحظات..."
+                className="text-right"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => setAddExternalOpen(false)}>
+              إلغاء
+            </Button>
+            <Button onClick={handleAddExternalBooking}>
+              <Plus className="w-4 h-4 ml-1" />
+              إضافة الحجز
             </Button>
           </DialogFooter>
         </DialogContent>
