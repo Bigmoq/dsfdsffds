@@ -68,9 +68,9 @@ export default function AdminLogin() {
         return;
       }
 
-      // User is admin, redirect to main app (admin panel is in profile)
+      // User is admin, redirect to main app with admin panel flag
       toast.success("مرحباً بك في لوحة الإدارة");
-      navigate("/");
+      navigate("/?admin=true");
     } catch (error) {
       console.error("Login error:", error);
       toast.error("حدث خطأ غير متوقع");
