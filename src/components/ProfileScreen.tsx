@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { VendorApplicationSheet } from "./VendorApplicationSheet";
 import { VendorDashboard } from "./VendorDashboard";
 import { MyBookings } from "./MyBookings";
-import { AdminPanel } from "./AdminPanel";
+import { AdminDashboard } from "./admin/AdminDashboard";
 import { NotificationsSheet } from "./NotificationsSheet";
 import { SettingsSheet } from "./SettingsSheet";
 import { ProfileEditSheet } from "./ProfileEditSheet";
@@ -103,38 +103,7 @@ export function ProfileScreen() {
 
   // Admin Panel View
   if (showAdminPanel && isAuthenticated && isAdmin) {
-    return (
-      <div className="min-h-screen pb-24">
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 px-4 pt-12 pb-6 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6bTAtMTBjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
-          
-          <button
-            onClick={() => setShowAdminPanel(false)}
-            className="flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-4"
-          >
-            <span className="font-arabic text-sm">العودة للحساب</span>
-            <ChevronLeft className="w-4 h-4 rotate-180" />
-          </button>
-          
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center relative z-10"
-          >
-            <h1 className="font-display text-3xl font-bold text-white mb-2">
-              لوحة الإدارة
-            </h1>
-            <p className="text-white/80 font-arabic text-sm">
-              إدارة طلبات الانضمام
-            </p>
-          </motion.div>
-        </div>
-        
-        <div className="p-4">
-          <AdminPanel />
-        </div>
-      </div>
-    );
+    return <AdminDashboard onBack={() => setShowAdminPanel(false)} />;
   }
 
   if (showVendorDashboard && isAuthenticated && isVendor) {
