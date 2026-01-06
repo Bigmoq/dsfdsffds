@@ -9,7 +9,8 @@ import {
   MessageSquare,
   Megaphone,
   FileCheck,
-  ArrowRight
+  ArrowRight,
+  Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminStats } from "./AdminStats";
@@ -21,8 +22,9 @@ import { AdminBookings } from "./AdminBookings";
 import { AdminComplaints } from "./AdminComplaints";
 import { AdminAds } from "./AdminAds";
 import { AdminApplications } from "./AdminApplications";
+import { AdminNotifications } from "./AdminNotifications";
 
-type AdminTab = "dashboard" | "users" | "halls" | "services" | "dresses" | "bookings" | "complaints" | "ads" | "applications";
+type AdminTab = "dashboard" | "users" | "halls" | "services" | "dresses" | "bookings" | "complaints" | "ads" | "applications" | "notifications";
 
 interface AdminDashboardProps {
   onBack: () => void;
@@ -38,6 +40,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     { id: "services" as AdminTab, label: "الخدمات", icon: Package },
     { id: "dresses" as AdminTab, label: "الفساتين", icon: ShoppingBag },
     { id: "bookings" as AdminTab, label: "الحجوزات", icon: Calendar },
+    { id: "notifications" as AdminTab, label: "الإشعارات", icon: Bell },
     { id: "complaints" as AdminTab, label: "الشكاوى", icon: MessageSquare },
     { id: "ads" as AdminTab, label: "الإعلانات", icon: Megaphone },
     { id: "applications" as AdminTab, label: "طلبات البائعين", icon: FileCheck },
@@ -51,6 +54,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
       case "services": return <AdminServices />;
       case "dresses": return <AdminDresses />;
       case "bookings": return <AdminBookings />;
+      case "notifications": return <AdminNotifications />;
       case "complaints": return <AdminComplaints />;
       case "ads": return <AdminAds />;
       case "applications": return <AdminApplications />;
