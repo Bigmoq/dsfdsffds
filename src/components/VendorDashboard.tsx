@@ -8,7 +8,7 @@ import { ServiceProviderManagement } from "./ServiceProviderManagement";
 import { DressSellerManagement } from "./DressSellerManagement";
 import { VendorAnalytics } from "./VendorAnalytics";
 import { ServiceBookingManagement } from "./ServiceBookingManagement";
-import { ServiceBookingCalendar } from "./ServiceBookingCalendar";
+import { BookingCalendarView } from "./BookingCalendarView";
 import { VendorQuickStats } from "./VendorQuickStats";
 import { VendorWelcome } from "./VendorWelcome";
 
@@ -119,7 +119,7 @@ export function VendorDashboard() {
         </button>
         <div className="px-4">
           <h2 className="font-display text-xl font-bold text-foreground mb-4 text-right">تقويم الحجوزات</h2>
-          <ServiceBookingCalendar />
+          <BookingCalendarView type="service" />
         </div>
       </div>
     );

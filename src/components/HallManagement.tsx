@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Plus, MapPin, Users, Calendar, Trash2, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookingCalendarView } from "./BookingCalendarView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -124,12 +125,16 @@ export function HallManagement() {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="halls" className="w-full" dir="rtl">
-        <TabsList className="grid w-full grid-cols-2 mx-4 max-w-[calc(100%-2rem)]">
-          <TabsTrigger value="halls" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-3 mx-4 max-w-[calc(100%-2rem)]">
+          <TabsTrigger value="halls" className="flex items-center gap-1.5 text-xs">
             <MapPin className="w-4 h-4" />
             القاعات
           </TabsTrigger>
-          <TabsTrigger value="bookings" className="flex items-center gap-2 relative">
+          <TabsTrigger value="calendar" className="flex items-center gap-1.5 text-xs">
+            <Calendar className="w-4 h-4" />
+            التقويم
+          </TabsTrigger>
+          <TabsTrigger value="bookings" className="flex items-center gap-1.5 text-xs relative">
             <ClipboardList className="w-4 h-4" />
             الحجوزات
             {pendingCount > 0 && (
@@ -238,6 +243,10 @@ export function HallManagement() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="calendar" className="mt-4 px-4">
+          <BookingCalendarView type="hall" />
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-4">
