@@ -70,7 +70,8 @@ export default function AdminLogin() {
 
       // User is admin, redirect to main app with admin panel flag
       toast.success("مرحباً بك في لوحة الإدارة");
-      navigate("/?admin=true");
+      // Use window.location to force full page reload so useAuth picks up the new session
+      window.location.href = "/?admin=true";
     } catch (error) {
       console.error("Login error:", error);
       toast.error("حدث خطأ غير متوقع");
