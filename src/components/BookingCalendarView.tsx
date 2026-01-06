@@ -414,13 +414,13 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
 
       {/* Calendar Grid */}
       <Card>
-        <CardContent className="p-3">
+        <CardContent className="p-2">
           {/* Week Days Header */}
           <div className="grid grid-cols-7 gap-1 mb-2">
             {weekDays.map((day) => (
               <div
                 key={day}
-                className="text-center text-xs font-medium text-muted-foreground py-2"
+                className="text-center text-[10px] font-medium text-muted-foreground py-1"
               >
                 {day}
               </div>
@@ -430,66 +430,95 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
           {/* Days Grid */}
           <div className="grid grid-cols-7 gap-1">
             {Array.from({ length: firstDayOffset }).map((_, index) => (
-              <div key={`empty-${index}`} className="aspect-square" />
+              <div key={`empty-${index}`} className="min-h-[70px]" />
             ))}
 
             {days.map((day, index) => {
               const dateBookings = getBookingsForDate(day);
               const hasBookings = dateBookings.length > 0;
-              const pendingExists = dateBookings.some((b) => b.status === "pending");
-              const confirmedExists = dateBookings.some(
-                (b) => b.status === "accepted" || b.status === "confirmed"
-              );
-              const paidExists = dateBookings.some(
-                (b) => (b as HallBooking).stripe_payment_id !== null
-              );
+              const firstBooking = dateBookings[0];
               const isPast = isBefore(day, today);
+              
+              // Get first booking details
+              const customerName = firstBooking?.profiles?.full_name;
+              const notes = firstBooking?.notes;
+              const isPaid = type === "hall" && firstBooking && (firstBooking as HallBooking).stripe_payment_id !== null;
+              const status = firstBooking?.status;
 
               return (
                 <motion.button
                   key={day.toISOString()}
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.005 }}
+                  transition={{ delay: index * 0.003 }}
                   onClick={() => handleDateClick(day)}
                   disabled={!hasBookings}
                   className={cn(
-                    "aspect-square rounded-lg flex flex-col items-center justify-center relative transition-all",
+                    "min-h-[70px] rounded-lg flex flex-col items-stretch p-1 relative transition-all text-right",
                     isToday(day) && "ring-2 ring-primary",
-                    hasBookings && "cursor-pointer hover:bg-muted/80",
-                    !hasBookings && "cursor-default",
+                    hasBookings && "cursor-pointer hover:shadow-md",
+                    !hasBookings && "cursor-default bg-muted/30",
                     hasBookings && !isPast && "bg-muted/50",
-                    isPast && "opacity-60"
+                    isPast && "opacity-50"
                   )}
                 >
-                  <span
-                    className={cn(
-                      "text-sm font-medium",
-                      isToday(day) && "text-primary font-bold"
+                  {/* Date Number */}
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={cn(
+                        "text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full",
+                        isToday(day) && "bg-primary text-primary-foreground font-bold",
+                        !isToday(day) && "text-foreground"
+                      )}
+                    >
+                      {format(day, "d")}
+                    </span>
+                    {/* Count Badge */}
+                    {dateBookings.length > 1 && (
+                      <span className="text-[9px] text-muted-foreground">
+                        +{dateBookings.length - 1}
+                      </span>
                     )}
-                  >
-                    {format(day, "d")}
-                  </span>
+                  </div>
 
-                  {/* Status Indicators */}
+                  {/* Booking Info */}
                   {hasBookings && (
-                    <div className="flex gap-0.5 mt-0.5">
-                      {pendingExists && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <div className="flex-1 mt-1 space-y-0.5 overflow-hidden">
+                      {/* Customer Name */}
+                      {customerName && (
+                        <p className="text-[8px] font-medium text-foreground truncate">
+                          {customerName.split(" ")[0]}
+                        </p>
                       )}
-                      {confirmedExists && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      
+                      {/* Status & Payment Indicators */}
+                      <div className="flex items-center gap-0.5 flex-wrap">
+                        {/* Status Dot */}
+                        <div className={cn(
+                          "w-1.5 h-1.5 rounded-full flex-shrink-0",
+                          status === "pending" && "bg-amber-500",
+                          (status === "accepted" || status === "confirmed") && "bg-green-500",
+                          status === "cancelled" && "bg-gray-400",
+                          status === "rejected" && "bg-red-500"
+                        )} />
+                        
+                        {/* Payment Status */}
+                        {type === "hall" && (
+                          <span className={cn(
+                            "text-[7px] px-1 rounded",
+                            isPaid ? "bg-green-500/20 text-green-700" : "bg-red-500/20 text-red-600"
+                          )}>
+                            {isPaid ? "مدفوع" : "غير مدفوع"}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Notes Preview */}
+                      {notes && (
+                        <p className="text-[7px] text-muted-foreground line-clamp-2 leading-tight">
+                          {notes}
+                        </p>
                       )}
-                      {paidExists && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      )}
-                    </div>
-                  )}
-
-                  {/* Count Badge */}
-                  {hasBookings && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center font-bold">
-                      {dateBookings.length}
                     </div>
                   )}
                 </motion.button>
