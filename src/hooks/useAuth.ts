@@ -44,15 +44,22 @@ export function useAuth() {
   }, []);
 
   const fetchUserRole = async (userId: string) => {
+    // Fetch all roles for the user and prioritize admin role
     const { data } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
-      .limit(1)
-      .maybeSingle();
+      .eq("user_id", userId);
     
-    if (data?.role) {
-      setRole(data.role as AppRole);
+    if (data && data.length > 0) {
+      // Prioritize admin role if user has multiple roles
+      const adminRole = data.find(r => r.role === "admin");
+      if (adminRole) {
+        setRole("admin");
+      } else {
+        // Otherwise use the first non-user role, or fall back to user
+        const vendorRole = data.find(r => r.role !== "user");
+        setRole((vendorRole?.role || data[0].role) as AppRole);
+      }
     }
   };
 
