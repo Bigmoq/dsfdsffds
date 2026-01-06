@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { BottomNav } from "@/components/BottomNav";
@@ -17,15 +17,10 @@ import { Loader2 } from "lucide-react";
 const Index = () => {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(2); // Default to Home (center)
-  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const { user, isVendor, isAdmin, loading } = useAuth();
-
-  // Check for admin query param on load
-  useEffect(() => {
-    if (searchParams.get("admin") === "true" && isAdmin) {
-      setShowAdminDashboard(true);
-    }
-  }, [searchParams, isAdmin]);
+  
+  // Check if admin param is present
+  const adminParam = searchParams.get("admin") === "true";
 
   // Show loading while checking auth
   if (loading) {
@@ -36,15 +31,15 @@ const Index = () => {
     );
   }
 
-  // If admin dashboard is requested
-  if (showAdminDashboard && isAdmin) {
+  // If admin dashboard is requested via URL param and user is admin
+  if (adminParam && isAdmin) {
     return (
       <>
         <Helmet>
           <title>لوحة الإدارة | زفاف</title>
           <meta name="description" content="لوحة إدارة التطبيق" />
         </Helmet>
-        <AdminDashboard onBack={() => setShowAdminDashboard(false)} />
+        <AdminDashboard onBack={() => window.location.href = "/"} />
       </>
     );
   }
