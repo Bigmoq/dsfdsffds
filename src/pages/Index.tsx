@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { BottomNav } from "@/components/BottomNav";
 import { HomeScreen } from "@/components/HomeScreen";
@@ -8,13 +9,23 @@ import { FavoritesScreen } from "@/components/FavoritesScreen";
 import { ProfileScreen } from "@/components/ProfileScreen";
 import { NotificationsSheet } from "@/components/NotificationsSheet";
 import { VendorDashboard } from "@/components/VendorDashboard";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { Helmet } from "react-helmet-async";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(2); // Default to Home (center)
-  const { user, isVendor, loading } = useAuth();
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const { user, isVendor, isAdmin, loading } = useAuth();
+
+  // Check for admin query param on load
+  useEffect(() => {
+    if (searchParams.get("admin") === "true" && isAdmin) {
+      setShowAdminDashboard(true);
+    }
+  }, [searchParams, isAdmin]);
 
   // Show loading while checking auth
   if (loading) {
@@ -22,6 +33,19 @@ const Index = () => {
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
+    );
+  }
+
+  // If admin dashboard is requested
+  if (showAdminDashboard && isAdmin) {
+    return (
+      <>
+        <Helmet>
+          <title>لوحة الإدارة | زفاف</title>
+          <meta name="description" content="لوحة إدارة التطبيق" />
+        </Helmet>
+        <AdminDashboard onBack={() => setShowAdminDashboard(false)} />
+      </>
     );
   }
 
