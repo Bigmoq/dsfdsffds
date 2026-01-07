@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Plus, MapPin, Users, Calendar, Trash2, ClipboardList } from "lucide-react";
+import { Plus, MapPin, Users, Calendar, Trash2, ClipboardList, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookingCalendarView } from "./BookingCalendarView";
@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useBookingNotifications } from "@/hooks/useBookingNotifications";
 import { AddHallSheet } from "./AddHallSheet";
+import { EditHallSheet } from "./EditHallSheet";
 import { HallCalendarSheet } from "./HallCalendarSheet";
 import { HallBookingManagement } from "./HallBookingManagement";
 import type { Database } from "@/integrations/supabase/types";
@@ -23,6 +24,8 @@ export function HallManagement() {
   const [showAddHall, setShowAddHall] = useState(false);
   const [selectedHall, setSelectedHall] = useState<Hall | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showEditHall, setShowEditHall] = useState(false);
+  const [editingHall, setEditingHall] = useState<Hall | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -112,6 +115,11 @@ export function HallManagement() {
     setShowCalendar(true);
   };
 
+  const openEditHall = (hall: Hall) => {
+    setEditingHall(hall);
+    setShowEditHall(true);
+  };
+
   if (loading) {
     return (
       <div className="p-4 space-y-4">
@@ -188,6 +196,14 @@ export function HallManagement() {
                           <Button
                             size="icon"
                             variant="outline"
+                            className="h-8 w-8"
+                            onClick={() => openEditHall(hall)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="outline"
                             className="h-8 w-8 text-destructive hover:text-destructive"
                             onClick={() => handleDeleteHall(hall.id)}
                           >
@@ -259,6 +275,15 @@ export function HallManagement() {
         onOpenChange={setShowAddHall}
         onSuccess={fetchHalls}
       />
+
+      {editingHall && (
+        <EditHallSheet
+          open={showEditHall}
+          onOpenChange={setShowEditHall}
+          onSuccess={fetchHalls}
+          hall={editingHall}
+        />
+      )}
       
       {selectedHall && (
         <HallCalendarSheet

@@ -379,12 +379,17 @@ export type Database = {
           is_active: boolean | null
           latitude: number | null
           longitude: number | null
+          min_capacity_men: number | null
+          min_capacity_women: number | null
           name_ar: string
           name_en: string | null
           owner_id: string
           phone: string | null
+          price_per_chair_weekday: number | null
+          price_per_chair_weekend: number | null
           price_weekday: number
           price_weekend: number
+          pricing_type: string | null
           updated_at: string | null
           whatsapp_enabled: boolean | null
         }
@@ -402,12 +407,17 @@ export type Database = {
           is_active?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          min_capacity_men?: number | null
+          min_capacity_women?: number | null
           name_ar: string
           name_en?: string | null
           owner_id: string
           phone?: string | null
+          price_per_chair_weekday?: number | null
+          price_per_chair_weekend?: number | null
           price_weekday: number
           price_weekend: number
+          pricing_type?: string | null
           updated_at?: string | null
           whatsapp_enabled?: boolean | null
         }
@@ -425,12 +435,17 @@ export type Database = {
           is_active?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          min_capacity_men?: number | null
+          min_capacity_women?: number | null
           name_ar?: string
           name_en?: string | null
           owner_id?: string
           phone?: string | null
+          price_per_chair_weekday?: number | null
+          price_per_chair_weekend?: number | null
           price_weekday?: number
           price_weekend?: number
+          pricing_type?: string | null
           updated_at?: string | null
           whatsapp_enabled?: boolean | null
         }

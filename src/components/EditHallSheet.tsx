@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,14 +12,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { saudiCities } from "@/data/weddingData";
+import type { Database } from "@/integrations/supabase/types";
 
-interface AddHallSheetProps {
+type Hall = Database["public"]["Tables"]["halls"]["Row"];
+
+interface EditHallSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  hall: Hall;
 }
 
-export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProps) {
+export function EditHallSheet({ open, onOpenChange, onSuccess, hall }: EditHallSheetProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -49,6 +53,32 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
     whatsapp_enabled: true,
   });
 
+  // Initialize form with hall data
+  useEffect(() => {
+    if (hall && open) {
+      setFormData({
+        name_ar: hall.name_ar || "",
+        name_en: hall.name_en || "",
+        city: hall.city || "",
+        address: hall.address || "",
+        description: hall.description || "",
+        capacity_men: hall.capacity_men?.toString() || "",
+        capacity_women: hall.capacity_women?.toString() || "",
+        min_capacity_men: (hall as any).min_capacity_men?.toString() || "",
+        min_capacity_women: (hall as any).min_capacity_women?.toString() || "",
+        pricing_type: ((hall as any).pricing_type as "total" | "per_chair") || "total",
+        price_weekday: hall.price_weekday?.toString() || "",
+        price_weekend: hall.price_weekend?.toString() || "",
+        price_per_chair_weekday: (hall as any).price_per_chair_weekday?.toString() || "",
+        price_per_chair_weekend: (hall as any).price_per_chair_weekend?.toString() || "",
+        phone: hall.phone || "",
+        whatsapp_enabled: hall.whatsapp_enabled ?? true,
+      });
+      setCoverImage(hall.cover_image || null);
+      setGalleryImages(hall.gallery_images || []);
+    }
+  }, [hall, open]);
+
   const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -56,12 +86,10 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
   const uploadImage = async (file: File, folder: string): Promise<string | null> => {
     if (!user) return null;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       throw new Error("يجب أن تكون الملفات صور فقط");
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       throw new Error("حجم الصورة يجب أن لا يتجاوز 5 ميجابايت");
     }
@@ -180,29 +208,6 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
     setGalleryImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const resetForm = () => {
-    setFormData({
-      name_ar: "",
-      name_en: "",
-      city: "",
-      address: "",
-      description: "",
-      capacity_men: "",
-      capacity_women: "",
-      min_capacity_men: "",
-      min_capacity_women: "",
-      pricing_type: "total",
-      price_weekday: "",
-      price_weekend: "",
-      price_per_chair_weekday: "",
-      price_per_chair_weekend: "",
-      phone: "",
-      whatsapp_enabled: true,
-    });
-    setCoverImage(null);
-    setGalleryImages([]);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -211,8 +216,7 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
     setLoading(true);
     
     try {
-      const insertData: any = {
-        owner_id: user.id,
+      const updateData: any = {
         name_ar: formData.name_ar,
         name_en: formData.name_en || null,
         city: formData.city,
@@ -233,22 +237,24 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
         whatsapp_enabled: formData.whatsapp_enabled,
       };
 
-      const { error } = await supabase.from("halls").insert(insertData);
+      const { error } = await supabase
+        .from("halls")
+        .update(updateData)
+        .eq("id", hall.id);
       
       if (error) throw error;
       
       toast({
-        title: "تمت الإضافة!",
-        description: "تم إضافة القاعة بنجاح",
+        title: "تم التحديث!",
+        description: "تم تحديث بيانات القاعة بنجاح",
       });
       
       onSuccess();
       onOpenChange(false);
-      resetForm();
     } catch (error) {
       toast({
         title: "خطأ",
-        description: "فشل إضافة القاعة",
+        description: "فشل تحديث القاعة",
         variant: "destructive",
       });
     } finally {
@@ -260,7 +266,7 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl overflow-y-auto" dir="rtl">
         <SheetHeader className="text-right mb-6">
-          <SheetTitle className="font-display text-2xl">إضافة قاعة جديدة</SheetTitle>
+          <SheetTitle className="font-display text-2xl">تعديل القاعة</SheetTitle>
         </SheetHeader>
         
         <form onSubmit={handleSubmit} className="space-y-5 pb-6">
@@ -477,12 +483,12 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
               className="flex gap-4"
             >
               <div className="flex items-center space-x-2 space-x-reverse">
-                <RadioGroupItem value="total" id="add-total" />
-                <Label htmlFor="add-total" className="font-arabic cursor-pointer">سعر إجمالي</Label>
+                <RadioGroupItem value="total" id="total" />
+                <Label htmlFor="total" className="font-arabic cursor-pointer">سعر إجمالي</Label>
               </div>
               <div className="flex items-center space-x-2 space-x-reverse">
-                <RadioGroupItem value="per_chair" id="add-per_chair" />
-                <Label htmlFor="add-per_chair" className="font-arabic cursor-pointer">سعر بالكرسي</Label>
+                <RadioGroupItem value="per_chair" id="per_chair" />
+                <Label htmlFor="per_chair" className="font-arabic cursor-pointer">سعر بالكرسي</Label>
               </div>
             </RadioGroup>
           </div>
@@ -559,7 +565,7 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
             <Label className="font-arabic">تفعيل التواصل عبر واتساب</Label>
             <Switch
               checked={formData.whatsapp_enabled}
-              onCheckedChange={(checked) => handleChange("whatsapp_enabled", checked.toString())}
+              onCheckedChange={(checked) => handleChange("whatsapp_enabled", checked)}
             />
           </div>
           
@@ -569,7 +575,7 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
             className="w-full gold-gradient text-white py-6"
           >
             <span className="font-arabic text-lg">
-              {loading ? "جارٍ الإضافة..." : "إضافة القاعة"}
+              {loading ? "جارٍ الحفظ..." : "حفظ التغييرات"}
             </span>
           </Button>
         </form>
