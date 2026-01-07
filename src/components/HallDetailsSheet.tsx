@@ -35,6 +35,11 @@ interface DatabaseHall {
   features?: string[];
   phone?: string;
   whatsapp_enabled?: boolean;
+  pricing_type?: string | null;
+  price_per_chair_weekday?: number | null;
+  price_per_chair_weekend?: number | null;
+  min_capacity_men?: number | null;
+  min_capacity_women?: number | null;
 }
 
 interface LegacyHall {
@@ -120,6 +125,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
   if (!hall) return null;
 
   // Normalize hall data
+  const isPerChair = isDatabaseHall(hall) && hall.pricing_type === 'per_chair';
   const normalizedHall = isDatabaseHall(hall) ? {
     id: hall.id,
     nameAr: hall.name_ar,
@@ -129,11 +135,16 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
     priceWeekend: hall.price_weekend,
     capacityMen: hall.capacity_men,
     capacityWomen: hall.capacity_women,
+    minCapacityMen: hall.min_capacity_men || 0,
+    minCapacityWomen: hall.min_capacity_women || 0,
     features: hall.features || [],
     phone: hall.phone,
     whatsappEnabled: hall.whatsapp_enabled,
     rating: ratingData?.average_rating || 0,
     reviewsCount: ratingData?.reviews_count || 0,
+    isPerChair,
+    pricePerChairWeekday: hall.price_per_chair_weekday || 0,
+    pricePerChairWeekend: hall.price_per_chair_weekend || 0,
   } : {
     id: hall.id,
     nameAr: hall.nameAr,
@@ -143,11 +154,16 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
     priceWeekend: Math.round(hall.price * 1.2),
     capacityMen: hall.capacityMen,
     capacityWomen: hall.capacityWomen,
+    minCapacityMen: 0,
+    minCapacityWomen: 0,
     features: hall.features,
     phone: undefined,
     whatsappEnabled: false,
     rating: hall.rating,
     reviewsCount: 0,
+    isPerChair: false,
+    pricePerChairWeekday: 0,
+    pricePerChairWeekend: 0,
   };
 
   const today = startOfDay(new Date());
@@ -283,15 +299,61 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
       )}
 
       {/* Price Info */}
-      <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-lg text-primary">SAR {normalizedHall.priceWeekday.toLocaleString()}</span>
-          <span className="text-sm text-muted-foreground">أيام الأسبوع</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-lg text-resale">SAR {normalizedHall.priceWeekend.toLocaleString()}</span>
-          <span className="text-sm text-muted-foreground">نهاية الأسبوع</span>
-        </div>
+      <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-4 space-y-3">
+        {normalizedHall.isPerChair ? (
+          <>
+            {/* Per Chair Pricing */}
+            <div className="text-center mb-2">
+              <span className="bg-primary/20 text-primary text-xs px-3 py-1 rounded-full font-arabic">
+                التسعير بالكرسي
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-lg text-primary">
+                SAR {normalizedHall.pricePerChairWeekday.toLocaleString()}/كرسي
+              </span>
+              <span className="text-sm text-muted-foreground">أيام الأسبوع</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-lg text-resale">
+                SAR {normalizedHall.pricePerChairWeekend.toLocaleString()}/كرسي
+              </span>
+              <span className="text-sm text-muted-foreground">نهاية الأسبوع</span>
+            </div>
+            {/* Minimum Capacity */}
+            {(normalizedHall.minCapacityMen > 0 || normalizedHall.minCapacityWomen > 0) && (
+              <div className="border-t border-border/50 pt-3 mt-2">
+                <p className="text-xs text-muted-foreground text-center mb-2">الحد الأدنى للكراسي</p>
+                <div className="flex items-center justify-center gap-6 text-sm">
+                  {normalizedHall.minCapacityMen > 0 && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-semibold text-foreground">{normalizedHall.minCapacityMen}</span>
+                      <span className="text-muted-foreground">رجال</span>
+                    </div>
+                  )}
+                  {normalizedHall.minCapacityWomen > 0 && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-semibold text-foreground">{normalizedHall.minCapacityWomen}</span>
+                      <span className="text-muted-foreground">نساء</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Total Pricing */}
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-lg text-primary">SAR {normalizedHall.priceWeekday.toLocaleString()}</span>
+              <span className="text-sm text-muted-foreground">أيام الأسبوع</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-lg text-resale">SAR {normalizedHall.priceWeekend.toLocaleString()}</span>
+              <span className="text-sm text-muted-foreground">نهاية الأسبوع</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* WhatsApp Contact Button */}
