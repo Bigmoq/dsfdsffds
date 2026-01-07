@@ -3,6 +3,16 @@ import { motion } from "framer-motion";
 import { Plus, MapPin, Users, Calendar, Trash2, ClipboardList, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { BookingCalendarView } from "./BookingCalendarView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +38,8 @@ export function HallManagement() {
   const [editingHall, setEditingHall] = useState<Hall | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [hallToDelete, setHallToDelete] = useState<string | null>(null);
 
   // Get hall IDs for realtime notifications
   const hallIds = halls.map(h => h.id);
@@ -89,11 +101,18 @@ export function HallManagement() {
     setPendingCount(count || 0);
   };
 
-  const handleDeleteHall = async (hallId: string) => {
+  const confirmDeleteHall = (hallId: string) => {
+    setHallToDelete(hallId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteHall = async () => {
+    if (!hallToDelete) return;
+    
     const { error } = await supabase
       .from("halls")
       .delete()
-      .eq("id", hallId);
+      .eq("id", hallToDelete);
     
     if (error) {
       toast({
@@ -108,6 +127,9 @@ export function HallManagement() {
       });
       fetchHalls();
     }
+    
+    setDeleteDialogOpen(false);
+    setHallToDelete(null);
   };
 
   const openCalendar = (hall: Hall) => {
@@ -205,7 +227,7 @@ export function HallManagement() {
                             size="icon"
                             variant="outline"
                             className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteHall(hall.id)}
+                            onClick={() => confirmDeleteHall(hall.id)}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -292,6 +314,26 @@ export function HallManagement() {
           hall={selectedHall}
         />
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-right">تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              هل أنت متأكد من حذف هذه القاعة؟ سيتم حذف جميع الحجوزات والبيانات المرتبطة بها.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteHall}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

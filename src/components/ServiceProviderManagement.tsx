@@ -2,6 +2,16 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Plus, MapPin, Star, Pencil, Trash2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +32,8 @@ export function ServiceProviderManagement() {
   const [showPackages, setShowPackages] = useState(false);
   const [editingProvider, setEditingProvider] = useState<ServiceProvider | null>(null);
   const [showEditProvider, setShowEditProvider] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [providerToDelete, setProviderToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -44,11 +56,18 @@ export function ServiceProviderManagement() {
     setLoading(false);
   };
 
-  const handleDeleteProvider = async (providerId: string) => {
+  const confirmDeleteProvider = (providerId: string) => {
+    setProviderToDelete(providerId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteProvider = async () => {
+    if (!providerToDelete) return;
+    
     const { error } = await supabase
       .from("service_providers")
       .delete()
-      .eq("id", providerId);
+      .eq("id", providerToDelete);
     
     if (error) {
       toast({
@@ -63,6 +82,9 @@ export function ServiceProviderManagement() {
       });
       fetchProviders();
     }
+    
+    setDeleteDialogOpen(false);
+    setProviderToDelete(null);
   };
 
   const openPackages = (provider: ServiceProvider) => {
@@ -152,7 +174,7 @@ export function ServiceProviderManagement() {
                       size="icon"
                       variant="outline"
                       className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteProvider(provider.id)}
+                      onClick={() => confirmDeleteProvider(provider.id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -232,6 +254,26 @@ export function ServiceProviderManagement() {
           onSuccess={fetchProviders}
         />
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-right">تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              هل أنت متأكد من حذف هذه الخدمة؟ سيتم حذف جميع الباقات والبيانات المرتبطة بها.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProvider}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
