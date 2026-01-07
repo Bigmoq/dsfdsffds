@@ -6,6 +6,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +31,8 @@ export function DressSellerManagement() {
   const [loading, setLoading] = useState(true);
   const [showAddDress, setShowAddDress] = useState(false);
   const [editingDress, setEditingDress] = useState<Dress | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [dressToDelete, setDressToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -43,11 +55,18 @@ export function DressSellerManagement() {
     setLoading(false);
   };
 
-  const handleDeleteDress = async (dressId: string) => {
+  const confirmDeleteDress = (dressId: string) => {
+    setDressToDelete(dressId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteDress = async () => {
+    if (!dressToDelete) return;
+    
     const { error } = await supabase
       .from("dresses")
       .delete()
-      .eq("id", dressId);
+      .eq("id", dressToDelete);
 
     if (error) {
       toast({
@@ -62,6 +81,9 @@ export function DressSellerManagement() {
       });
       fetchDresses();
     }
+    
+    setDeleteDialogOpen(false);
+    setDressToDelete(null);
   };
 
   const toggleDressStatus = async (dress: Dress) => {
@@ -240,7 +262,7 @@ export function DressSellerManagement() {
                       size="sm"
                       variant="outline"
                       className="h-8"
-                      onClick={() => handleDeleteDress(dress.id)}
+                      onClick={() => confirmDeleteDress(dress.id)}
                     >
                       <Trash2 className="w-3 h-3 text-destructive" />
                     </Button>
@@ -302,6 +324,26 @@ export function DressSellerManagement() {
         editingDress={editingDress}
         onSuccess={fetchDresses}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-right">تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              هل أنت متأكد من حذف هذا الفستان؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDress}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
