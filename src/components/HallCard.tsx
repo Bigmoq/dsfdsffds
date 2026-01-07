@@ -14,10 +14,14 @@ interface DatabaseHall {
   city: string;
   cover_image?: string | null;
   price_weekday: number;
+  price_weekend?: number;
   capacity_men: number;
   capacity_women: number;
   phone?: string | null;
   whatsapp_enabled?: boolean | null;
+  pricing_type?: string | null;
+  price_per_chair_weekday?: number | null;
+  price_per_chair_weekend?: number | null;
 }
 
 type HallData = WeddingHall | DatabaseHall;
@@ -41,10 +45,16 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
   const hallName = isDatabaseHall(hall) ? hall.name_ar : hall.nameAr;
   const hallCity = isDatabaseHall(hall) ? hall.city : hall.cityAr;
   const hallImage = isDatabaseHall(hall) ? (hall.cover_image || '/placeholder.svg') : hall.image;
-  const hallPrice = isDatabaseHall(hall) ? hall.price_weekday : hall.price;
   const capacityMen = isDatabaseHall(hall) ? hall.capacity_men : hall.capacityMen;
   const capacityWomen = isDatabaseHall(hall) ? hall.capacity_women : hall.capacityWomen;
   const rating = isDatabaseHall(hall) ? undefined : hall.rating;
+  
+  // Pricing logic
+  const isPerChair = isDatabaseHall(hall) && hall.pricing_type === 'per_chair';
+  const hallPrice = isDatabaseHall(hall) 
+    ? (isPerChair ? (hall.price_per_chair_weekday || 0) : hall.price_weekday)
+    : hall.price;
+  const priceLabel = isPerChair ? '/كرسي' : '';
 
   const isHallFavorite = isFavorite(hallId);
 
@@ -105,7 +115,7 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
         {/* Price Badge */}
         <div className="absolute top-3 left-3 gold-gradient px-3 py-1.5 rounded-full shadow-lg">
           <span className="text-sm font-bold text-white">
-            SAR {hallPrice.toLocaleString()}
+            SAR {hallPrice.toLocaleString()}{priceLabel && <span className="text-xs font-arabic mr-1">{priceLabel}</span>}
           </span>
         </div>
 
