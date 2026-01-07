@@ -74,8 +74,8 @@ function isDatabaseHall(hall: HallData): hall is DatabaseHall {
 export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetProps) {
   const [step, setStep] = useState<BookingStep>("details");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [guestCountMen, setGuestCountMen] = useState(100);
-  const [guestCountWomen, setGuestCountWomen] = useState(100);
+  const [guestCountMen, setGuestCountMen] = useState(0);
+  const [guestCountWomen, setGuestCountWomen] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
@@ -168,13 +168,39 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
 
   const today = startOfDay(new Date());
   const isWeekend = selectedDate ? [4, 5].includes(selectedDate.getDay()) : false; // Thu, Fri
-  const price = isWeekend ? normalizedHall.priceWeekend : normalizedHall.priceWeekday;
+  
+  // Calculate total price based on pricing type
+  const calculateTotalPrice = () => {
+    if (normalizedHall.isPerChair) {
+      const pricePerChair = isWeekend ? normalizedHall.pricePerChairWeekend : normalizedHall.pricePerChairWeekday;
+      return (guestCountMen + guestCountWomen) * pricePerChair;
+    }
+    return isWeekend ? normalizedHall.priceWeekend : normalizedHall.priceWeekday;
+  };
+  
+  const price = calculateTotalPrice();
+
+  // Set initial guest counts based on minimum capacity for per-chair halls
+  useEffect(() => {
+    if (normalizedHall.isPerChair) {
+      setGuestCountMen(normalizedHall.minCapacityMen || 50);
+      setGuestCountWomen(normalizedHall.minCapacityWomen || 50);
+    } else {
+      setGuestCountMen(100);
+      setGuestCountWomen(100);
+    }
+  }, [hall?.id, normalizedHall.isPerChair, normalizedHall.minCapacityMen, normalizedHall.minCapacityWomen]);
 
   const resetForm = () => {
     setStep("details");
     setSelectedDate(undefined);
-    setGuestCountMen(100);
-    setGuestCountWomen(100);
+    if (normalizedHall.isPerChair) {
+      setGuestCountMen(normalizedHall.minCapacityMen || 50);
+      setGuestCountWomen(normalizedHall.minCapacityWomen || 50);
+    } else {
+      setGuestCountMen(100);
+      setGuestCountWomen(100);
+    }
   };
 
   const handleClose = () => {
@@ -524,7 +550,12 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
       {/* Men Guests */}
       <div className="bg-muted/50 rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">الحد الأقصى: {normalizedHall.capacityMen}</span>
+          <div className="text-sm text-muted-foreground">
+            {normalizedHall.isPerChair && normalizedHall.minCapacityMen > 0 && (
+              <span className="ml-2">الحد الأدنى: {normalizedHall.minCapacityMen} |</span>
+            )}
+            الحد الأقصى: {normalizedHall.capacityMen}
+          </div>
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-primary" />
             <span className="font-semibold text-foreground">قسم الرجال</span>
@@ -535,7 +566,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
             variant="outline"
             size="icon"
             className="rounded-full"
-            onClick={() => setGuestCountMen(Math.max(10, guestCountMen - 10))}
+            onClick={() => setGuestCountMen(Math.max(normalizedHall.isPerChair ? normalizedHall.minCapacityMen : 10, guestCountMen - 10))}
           >
             <Minus className="w-4 h-4" />
           </Button>
@@ -556,7 +587,12 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
       {/* Women Guests */}
       <div className="bg-muted/50 rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">الحد الأقصى: {normalizedHall.capacityWomen}</span>
+          <div className="text-sm text-muted-foreground">
+            {normalizedHall.isPerChair && normalizedHall.minCapacityWomen > 0 && (
+              <span className="ml-2">الحد الأدنى: {normalizedHall.minCapacityWomen} |</span>
+            )}
+            الحد الأقصى: {normalizedHall.capacityWomen}
+          </div>
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-primary" />
             <span className="font-semibold text-foreground">قسم النساء</span>
@@ -567,7 +603,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
             variant="outline"
             size="icon"
             className="rounded-full"
-            onClick={() => setGuestCountWomen(Math.max(10, guestCountWomen - 10))}
+            onClick={() => setGuestCountWomen(Math.max(normalizedHall.isPerChair ? normalizedHall.minCapacityWomen : 10, guestCountWomen - 10))}
           >
             <Minus className="w-4 h-4" />
           </Button>
@@ -584,6 +620,26 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
           </Button>
         </div>
       </div>
+
+      {/* Dynamic Price Display for Per-Chair Halls */}
+      {normalizedHall.isPerChair && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-br from-primary/10 to-resale/10 rounded-xl p-4 space-y-2"
+        >
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">
+              {guestCountMen + guestCountWomen} كرسي × SAR {(isWeekend ? normalizedHall.pricePerChairWeekend : normalizedHall.pricePerChairWeekday).toLocaleString()}
+            </span>
+            <span className="text-muted-foreground">حساب السعر</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xl font-bold text-primary">SAR {price.toLocaleString()}</span>
+            <span className="font-semibold text-foreground">المجموع التقديري</span>
+          </div>
+        </motion.div>
+      )}
 
       <Button 
         className="w-full gold-gradient text-white"
