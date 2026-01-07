@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, MapPin, Star, Edit, Trash2, Package } from "lucide-react";
+import { Plus, MapPin, Star, Pencil, Trash2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { AddServiceProviderSheet } from "./AddServiceProviderSheet";
+import { EditServiceProviderSheet } from "./EditServiceProviderSheet";
 import { ManagePackagesSheet } from "./ManagePackagesSheet";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -19,6 +20,8 @@ export function ServiceProviderManagement() {
   const [showAddProvider, setShowAddProvider] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
   const [showPackages, setShowPackages] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<ServiceProvider | null>(null);
+  const [showEditProvider, setShowEditProvider] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -137,6 +140,17 @@ export function ServiceProviderManagement() {
                     <Button
                       size="icon"
                       variant="outline"
+                      className="h-8 w-8"
+                      onClick={() => {
+                        setEditingProvider(provider);
+                        setShowEditProvider(true);
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="outline"
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => handleDeleteProvider(provider.id)}
                     >
@@ -207,6 +221,15 @@ export function ServiceProviderManagement() {
           open={showPackages}
           onOpenChange={setShowPackages}
           provider={selectedProvider}
+        />
+      )}
+      
+      {editingProvider && (
+        <EditServiceProviderSheet
+          open={showEditProvider}
+          onOpenChange={setShowEditProvider}
+          provider={editingProvider}
+          onSuccess={fetchProviders}
         />
       )}
     </div>
