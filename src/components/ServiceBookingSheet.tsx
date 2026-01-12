@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -31,15 +31,23 @@ interface ServiceBookingSheetProps {
     name_en?: string | null;
   };
   packages: ServicePackage[];
+  initialDate?: Date;
 }
 
-export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages }: ServiceBookingSheetProps) => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initialDate }: ServiceBookingSheetProps) => {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
   const [selectedPackage, setSelectedPackage] = useState<ServicePackage | null>(null);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const { toast } = useToast();
+
+  // Update selected date when initialDate changes
+  useEffect(() => {
+    if (initialDate) {
+      setSelectedDate(initialDate);
+    }
+  }, [initialDate]);
 
   // Fetch availability for the provider
   const { data: availability } = useQuery({

@@ -28,6 +28,18 @@ interface Availability {
   status: 'available' | 'booked' | 'unavailable';
 }
 
+interface ServiceBookingSheetWithDateProps {
+  isOpen: boolean;
+  onClose: () => void;
+  provider: {
+    id: string;
+    name_ar: string;
+    name_en?: string | null;
+  };
+  packages: ServicePackage[];
+  initialDate?: Date;
+}
+
 interface VendorDetailsSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -52,6 +64,7 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookingSheetOpen, setBookingSheetOpen] = useState(false);
+  const [selectedBookingDate, setSelectedBookingDate] = useState<Date | undefined>();
   const images = vendor?.portfolio_images?.length 
     ? vendor.portfolio_images 
     : vendor?.image 
@@ -267,6 +280,9 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
                   const status = getAvailabilityForDate(date);
                   const config = getStatusConfig(status);
                   const Icon = config.icon;
+                  const isAvailable = status === 'available' || status === 'unknown';
+                  const hasPackages = packages.length > 0;
+                  const canBook = isAvailable && hasPackages;
                   
                   return (
                     <motion.div
@@ -274,7 +290,17 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className={`flex flex-col items-center p-2 rounded-xl ${config.color}`}
+                      onClick={() => {
+                        if (canBook) {
+                          setSelectedBookingDate(date);
+                          setBookingSheetOpen(true);
+                        }
+                      }}
+                      className={`flex flex-col items-center p-2 rounded-xl ${config.color} ${
+                        canBook 
+                          ? 'cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all active:scale-95' 
+                          : ''
+                      }`}
                     >
                       <span className="text-xs text-muted-foreground mb-1">
                         {format(date, 'EEE', { locale: ar })}
@@ -416,13 +442,17 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
         {vendor && (
           <ServiceBookingSheet
             isOpen={bookingSheetOpen}
-            onClose={() => setBookingSheetOpen(false)}
+            onClose={() => {
+              setBookingSheetOpen(false);
+              setSelectedBookingDate(undefined);
+            }}
             provider={{
               id: vendor.id,
               name_ar: vendor.nameAr,
               name_en: vendor.name,
             }}
             packages={packages}
+            initialDate={selectedBookingDate}
           />
         )}
       </SheetContent>
