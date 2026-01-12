@@ -182,14 +182,16 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
 
   // Set initial guest counts based on minimum capacity for per-chair halls
   useEffect(() => {
-    if (normalizedHall.isPerChair) {
-      setGuestCountMen(normalizedHall.minCapacityMen || 50);
-      setGuestCountWomen(normalizedHall.minCapacityWomen || 50);
+    if (isPerChair) {
+      const minMen = (isDatabaseHall(hall) && hall.min_capacity_men) || 50;
+      const minWomen = (isDatabaseHall(hall) && hall.min_capacity_women) || 50;
+      setGuestCountMen(minMen);
+      setGuestCountWomen(minWomen);
     } else {
       setGuestCountMen(100);
       setGuestCountWomen(100);
     }
-  }, [hall?.id, normalizedHall.isPerChair, normalizedHall.minCapacityMen, normalizedHall.minCapacityWomen]);
+  }, [hall?.id, isPerChair]);
 
   const resetForm = () => {
     setStep("details");
