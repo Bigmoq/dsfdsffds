@@ -82,6 +82,9 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Check if hall is per-chair pricing
+  const isPerChair = hall && isDatabaseHall(hall) && hall.pricing_type === 'per_chair';
+
   // Fetch hall availability
   useEffect(() => {
     if (!hall || !open) return;
@@ -122,10 +125,24 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
     enabled: !!hall && isDatabaseHall(hall),
   });
 
+  // Set initial guest counts based on minimum capacity for per-chair halls
+  useEffect(() => {
+    if (!hall) return;
+    if (isPerChair) {
+      const minMen = (isDatabaseHall(hall) && hall.min_capacity_men) || 50;
+      const minWomen = (isDatabaseHall(hall) && hall.min_capacity_women) || 50;
+      setGuestCountMen(minMen);
+      setGuestCountWomen(minWomen);
+    } else {
+      setGuestCountMen(100);
+      setGuestCountWomen(100);
+    }
+  }, [hall?.id, isPerChair]);
+
+  // Early return AFTER all hooks
   if (!hall) return null;
 
   // Normalize hall data
-  const isPerChair = isDatabaseHall(hall) && hall.pricing_type === 'per_chair';
   const normalizedHall = isDatabaseHall(hall) ? {
     id: hall.id,
     nameAr: hall.name_ar,
@@ -142,7 +159,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
     whatsappEnabled: hall.whatsapp_enabled,
     rating: ratingData?.average_rating || 0,
     reviewsCount: ratingData?.reviews_count || 0,
-    isPerChair,
+    isPerChair: !!isPerChair,
     pricePerChairWeekday: hall.price_per_chair_weekday || 0,
     pricePerChairWeekend: hall.price_per_chair_weekend || 0,
   } : {
@@ -179,19 +196,6 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
   };
   
   const price = calculateTotalPrice();
-
-  // Set initial guest counts based on minimum capacity for per-chair halls
-  useEffect(() => {
-    if (isPerChair) {
-      const minMen = (isDatabaseHall(hall) && hall.min_capacity_men) || 50;
-      const minWomen = (isDatabaseHall(hall) && hall.min_capacity_women) || 50;
-      setGuestCountMen(minMen);
-      setGuestCountWomen(minWomen);
-    } else {
-      setGuestCountMen(100);
-      setGuestCountWomen(100);
-    }
-  }, [hall?.id, isPerChair]);
 
   const resetForm = () => {
     setStep("details");
