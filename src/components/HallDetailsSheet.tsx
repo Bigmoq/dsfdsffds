@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
-import { format, addDays, isBefore, startOfDay, startOfMonth, endOfMonth } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import { format, addDays, isBefore, startOfDay, startOfMonth, endOfMonth, startOfToday, isSameDay } from "date-fns";
 import { ar } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { 
   MapPin, Star, Users, Calendar, Check, X, 
-  ChevronLeft, ChevronRight, Minus, Plus, MessageCircle
+  ChevronLeft, ChevronRight, Minus, Plus, MessageCircle,
+  CheckCircle, XCircle, AlertCircle, Clock
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -404,6 +405,86 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
           <span className="font-arabic">تواصل عبر واتساب</span>
         </Button>
       )}
+
+      {/* Quick Availability - Next 7 Days */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-end gap-2">
+          <h4 className="font-semibold text-foreground font-arabic">التوفر هذا الأسبوع</h4>
+          <Calendar className="w-5 h-5 text-primary" />
+        </div>
+        
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 7 }, (_, i) => addDays(startOfToday(), i)).map((date, index) => {
+            const dateStr = format(date, 'yyyy-MM-dd');
+            const status = availability[dateStr] || 'available';
+            const isAvailable = status === 'available' || status === 'resale';
+            
+            const getQuickStatusConfig = (s: string) => {
+              switch (s) {
+                case 'available':
+                  return { icon: CheckCircle, color: 'text-available bg-available/10', label: 'متاح' };
+                case 'booked':
+                  return { icon: XCircle, color: 'text-booked bg-booked/10', label: 'محجوز' };
+                case 'resale':
+                  return { icon: AlertCircle, color: 'text-resale bg-resale/10', label: 'إعادة بيع' };
+                default:
+                  return { icon: CheckCircle, color: 'text-available bg-available/10', label: 'متاح' };
+              }
+            };
+            
+            const config = getQuickStatusConfig(status);
+            const Icon = config.icon;
+            
+            return (
+              <motion.div
+                key={date.toISOString()}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                onClick={() => {
+                  if (isAvailable) {
+                    setSelectedDate(date);
+                    setStep("guests");
+                  }
+                }}
+                className={`flex flex-col items-center p-2 rounded-xl ${config.color} ${
+                  isAvailable 
+                    ? 'cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all active:scale-95' 
+                    : 'opacity-60'
+                }`}
+              >
+                <span className="text-xs text-muted-foreground mb-1">
+                  {format(date, 'EEE', { locale: ar })}
+                </span>
+                <span className="text-sm font-bold mb-1">
+                  {format(date, 'd')}
+                </span>
+                <Icon className="w-4 h-4" />
+              </motion.div>
+            );
+          })}
+        </div>
+        
+        {/* Legend */}
+        <div className="flex items-center justify-center gap-4 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-available" />
+            <span>متاح</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-booked" />
+            <span>محجوز</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-resale" />
+            <span>إعادة بيع</span>
+          </div>
+        </div>
+        
+        <p className="text-xs text-muted-foreground text-center">
+          انقر على يوم متاح للحجز السريع
+        </p>
+      </div>
 
       {/* Reviews Section */}
       <div className="space-y-2">
