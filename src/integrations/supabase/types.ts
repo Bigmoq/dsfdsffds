@@ -505,6 +505,7 @@ export type Database = {
           onboarding_completed: boolean | null
           phone: string | null
           updated_at: string | null
+          vendor_welcome_seen: boolean | null
         }
         Insert: {
           avatar_url?: string | null
@@ -515,6 +516,7 @@ export type Database = {
           onboarding_completed?: boolean | null
           phone?: string | null
           updated_at?: string | null
+          vendor_welcome_seen?: boolean | null
         }
         Update: {
           avatar_url?: string | null
@@ -525,6 +527,7 @@ export type Database = {
           onboarding_completed?: boolean | null
           phone?: string | null
           updated_at?: string | null
+          vendor_welcome_seen?: boolean | null
         }
         Relationships: []
       }

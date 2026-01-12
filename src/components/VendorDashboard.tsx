@@ -19,29 +19,52 @@ export function VendorDashboard() {
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    if (user && role) {
-      setLoading(false);
+    const checkWelcomeStatus = async () => {
+      if (!user || !role) return;
       
-      // Check if this is the first time for any vendor type
+      // Check if this is a vendor role
       if (role === "hall_owner" || role === "service_provider" || role === "dress_seller") {
-        const welcomeKey = `vendor_welcome_seen_${user.id}_${role}`;
-        const hasSeenWelcome = localStorage.getItem(welcomeKey);
-        
-        if (!hasSeenWelcome) {
-          setShowWelcome(true);
-        } else {
+        try {
+          // Check database for vendor_welcome_seen status
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('vendor_welcome_seen')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (error) {
+            console.error('Error checking welcome status:', error);
+            setActiveView(role);
+          } else if (!profile?.vendor_welcome_seen) {
+            setShowWelcome(true);
+          } else {
+            setActiveView(role);
+          }
+        } catch (err) {
+          console.error('Error:', err);
           setActiveView(role);
         }
       } else if (role !== "user") {
         setActiveView(role);
       }
-    }
+      
+      setLoading(false);
+    };
+
+    checkWelcomeStatus();
   }, [user, role]);
 
-  const handleWelcomeComplete = () => {
-    if (user && role) {
-      const welcomeKey = `vendor_welcome_seen_${user.id}_${role}`;
-      localStorage.setItem(welcomeKey, "true");
+  const handleWelcomeComplete = async () => {
+    if (user) {
+      try {
+        // Update database to mark welcome as seen
+        await supabase
+          .from('profiles')
+          .update({ vendor_welcome_seen: true })
+          .eq('id', user.id);
+      } catch (err) {
+        console.error('Error updating welcome status:', err);
+      }
     }
     setShowWelcome(false);
     setActiveView(role);
