@@ -60,6 +60,8 @@ interface AnalyticsData {
     guest_count_women?: number;
     hall_name?: string;
     provider_name?: string;
+    customer_name?: string;
+    is_paid?: boolean;
   }[];
 }
 
@@ -131,10 +133,10 @@ export function VendorAnalytics() {
         const hallIds = halls.map(h => h.id);
         halls.forEach(h => { entityNames[h.id] = h.name_ar; });
 
-        // Fetch all bookings for user's halls
+        // Fetch all bookings for user's halls with customer info
         const { data: bookings } = await supabase
           .from("hall_bookings")
-          .select("*")
+          .select("*, profiles:user_id(full_name)")
           .in("hall_id", hallIds)
           .order("created_at", { ascending: false });
 
@@ -143,6 +145,8 @@ export function VendorAnalytics() {
           entity_id: b.hall_id,
           entity_name: entityNames[b.hall_id],
           status: b.status || "pending",
+          customer_name: (b.profiles as any)?.full_name || "غير معروف",
+          is_paid: !!b.stripe_payment_id,
         }));
       } else if (role === "service_provider") {
         // Fetch user's service providers
@@ -174,10 +178,10 @@ export function VendorAnalytics() {
         const providerIds = providers.map(p => p.id);
         providers.forEach(p => { entityNames[p.id] = p.name_ar; });
 
-        // Fetch all bookings for user's providers
+        // Fetch all bookings for user's providers with customer info
         const { data: bookings } = await supabase
           .from("service_bookings")
-          .select("*")
+          .select("*, profiles:user_id(full_name)")
           .in("provider_id", providerIds)
           .order("created_at", { ascending: false });
 
@@ -186,6 +190,8 @@ export function VendorAnalytics() {
           entity_id: b.provider_id,
           entity_name: entityNames[b.provider_id],
           status: b.status || "pending",
+          customer_name: (b.profiles as any)?.full_name || "غير معروف",
+          is_paid: false, // Service bookings don't have payment tracking yet
         }));
       }
 
@@ -281,6 +287,8 @@ export function VendorAnalytics() {
         guest_count_women: b.guest_count_women || 0,
         hall_name: role === "hall_owner" ? b.entity_name : undefined,
         provider_name: role === "service_provider" ? b.entity_name : undefined,
+        customer_name: b.customer_name,
+        is_paid: b.is_paid,
       }));
 
       setAnalytics({
@@ -713,9 +721,21 @@ export function VendorAnalytics() {
                       <span className="font-bold text-foreground">
                         {booking.total_price.toLocaleString()} ر.س
                       </span>
+                      {booking.is_paid ? (
+                        <span className="px-2 py-1 rounded-lg text-xs font-arabic bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                          مدفوع
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 rounded-lg text-xs font-arabic bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                          غير مدفوع
+                        </span>
+                      )}
                     </div>
                     <div className="text-right">
-                      <p className="font-arabic text-sm text-foreground">
+                      <p className="font-arabic text-sm font-medium text-foreground">
+                        {booking.customer_name || "غير معروف"}
+                      </p>
+                      <p className="font-arabic text-xs text-muted-foreground">
                         {booking.hall_name || booking.provider_name || (role === "hall_owner" ? "قاعة" : "خدمة")}
                       </p>
                       <p className="text-xs text-muted-foreground">
