@@ -13,12 +13,20 @@ import {
   ArrowUp,
   ArrowDown,
   Loader2,
-  PieChart as PieChartIcon
+  PieChart as PieChartIcon,
+  Phone,
+  User,
+  CreditCard,
+  Clock,
+  MapPin,
+  X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { ar } from "date-fns/locale";
 import { 
@@ -61,7 +69,10 @@ interface AnalyticsData {
     hall_name?: string;
     provider_name?: string;
     customer_name?: string;
+    customer_phone?: string;
     is_paid?: boolean;
+    notes?: string;
+    created_at?: string;
   }[];
 }
 
@@ -83,11 +94,30 @@ const STATUS_LABELS: { [key: string]: string } = {
   cancelled: "ملغي",
 };
 
+type SelectedBooking = AnalyticsData['recentBookings'][0] | null;
+
 export function VendorAnalytics() {
   const { user, role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");
+  const [selectedBooking, setSelectedBooking] = useState<SelectedBooking>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const handleBookingClick = (booking: AnalyticsData['recentBookings'][0]) => {
+    setSelectedBooking(booking);
+    setSheetOpen(true);
+  };
+
+  const handleWhatsApp = (phone: string) => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    const formattedPhone = cleanPhone.startsWith("966") ? cleanPhone : `966${cleanPhone.replace(/^0/, "")}`;
+    window.open(`https://wa.me/${formattedPhone}`, "_blank");
+  };
+
+  const handleCall = (phone: string) => {
+    window.open(`tel:${phone}`, "_self");
+  };
 
   useEffect(() => {
     if (user && (role === "hall_owner" || role === "service_provider")) {
@@ -136,7 +166,7 @@ export function VendorAnalytics() {
         // Fetch all bookings for user's halls with customer info
         const { data: bookings } = await supabase
           .from("hall_bookings")
-          .select("*, profiles:user_id(full_name)")
+          .select("*, profiles:user_id(full_name, phone)")
           .in("hall_id", hallIds)
           .order("created_at", { ascending: false });
 
@@ -146,6 +176,7 @@ export function VendorAnalytics() {
           entity_name: entityNames[b.hall_id],
           status: b.status || "pending",
           customer_name: (b.profiles as any)?.full_name || "غير معروف",
+          customer_phone: (b.profiles as any)?.phone || null,
           is_paid: !!b.stripe_payment_id,
         }));
       } else if (role === "service_provider") {
@@ -181,7 +212,7 @@ export function VendorAnalytics() {
         // Fetch all bookings for user's providers with customer info
         const { data: bookings } = await supabase
           .from("service_bookings")
-          .select("*, profiles:user_id(full_name)")
+          .select("*, profiles:user_id(full_name, phone)")
           .in("provider_id", providerIds)
           .order("created_at", { ascending: false });
 
@@ -191,6 +222,7 @@ export function VendorAnalytics() {
           entity_name: entityNames[b.provider_id],
           status: b.status || "pending",
           customer_name: (b.profiles as any)?.full_name || "غير معروف",
+          customer_phone: (b.profiles as any)?.phone || null,
           is_paid: false, // Service bookings don't have payment tracking yet
         }));
       }
@@ -288,7 +320,10 @@ export function VendorAnalytics() {
         hall_name: role === "hall_owner" ? b.entity_name : undefined,
         provider_name: role === "service_provider" ? b.entity_name : undefined,
         customer_name: b.customer_name,
+        customer_phone: b.customer_phone,
         is_paid: b.is_paid,
+        notes: b.notes,
+        created_at: b.created_at,
       }));
 
       setAnalytics({
@@ -712,7 +747,8 @@ export function VendorAnalytics() {
                 {analytics.recentBookings.map((booking) => (
                   <div
                     key={booking.id}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-xl"
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-xl cursor-pointer hover:bg-muted/80 transition-colors"
+                    onClick={() => handleBookingClick(booking)}
                   >
                     <div className="flex items-center gap-3">
                       <span className={`px-2 py-1 rounded-lg text-xs font-arabic ${getStatusColor(booking.status)}`}>
@@ -753,6 +789,153 @@ export function VendorAnalytics() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Booking Details Sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
+          <SheetHeader className="text-right pb-4 border-b">
+            <SheetTitle className="font-display text-xl">تفاصيل الحجز</SheetTitle>
+          </SheetHeader>
+          
+          {selectedBooking && (
+            <div className="py-6 space-y-6 overflow-y-auto max-h-[calc(85vh-120px)]">
+              {/* Customer Info */}
+              <div className="bg-muted/50 rounded-2xl p-4 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="text-right flex-1">
+                    <p className="font-arabic font-medium text-foreground">
+                      {selectedBooking.customer_name || "غير معروف"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">العميل</p>
+                  </div>
+                </div>
+                
+                {selectedBooking.customer_phone && (
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 gap-2"
+                      onClick={() => handleCall(selectedBooking.customer_phone!)}
+                    >
+                      <Phone className="w-4 h-4" />
+                      اتصال
+                    </Button>
+                    <Button 
+                      className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleWhatsApp(selectedBooking.customer_phone!)}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      واتساب
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Booking Details */}
+              <div className="space-y-4">
+                <h3 className="font-arabic font-medium text-foreground text-right">تفاصيل الحجز</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-muted/50 rounded-xl p-3 text-right">
+                    <div className="flex items-center gap-2 justify-end mb-1">
+                      <span className="text-sm text-muted-foreground">التاريخ</span>
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <p className="font-arabic font-medium">
+                      {format(new Date(selectedBooking.booking_date), "d MMMM yyyy", { locale: ar })}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-muted/50 rounded-xl p-3 text-right">
+                    <div className="flex items-center gap-2 justify-end mb-1">
+                      <span className="text-sm text-muted-foreground">السعر</span>
+                      <DollarSign className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <p className="font-arabic font-medium">
+                      {selectedBooking.total_price.toLocaleString()} ر.س
+                    </p>
+                  </div>
+                  
+                  <div className="bg-muted/50 rounded-xl p-3 text-right">
+                    <div className="flex items-center gap-2 justify-end mb-1">
+                      <span className="text-sm text-muted-foreground">الحالة</span>
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <span className={`px-2 py-1 rounded-lg text-xs font-arabic ${getStatusColor(selectedBooking.status)}`}>
+                      {getStatusLabel(selectedBooking.status)}
+                    </span>
+                  </div>
+                  
+                  <div className="bg-muted/50 rounded-xl p-3 text-right">
+                    <div className="flex items-center gap-2 justify-end mb-1">
+                      <span className="text-sm text-muted-foreground">الدفع</span>
+                      <CreditCard className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    {selectedBooking.is_paid ? (
+                      <span className="px-2 py-1 rounded-lg text-xs font-arabic bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        مدفوع
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-lg text-xs font-arabic bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                        غير مدفوع
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Hall/Service Name */}
+                <div className="bg-muted/50 rounded-xl p-3 text-right">
+                  <div className="flex items-center gap-2 justify-end mb-1">
+                    <span className="text-sm text-muted-foreground">
+                      {role === "hall_owner" ? "القاعة" : "الخدمة"}
+                    </span>
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <p className="font-arabic font-medium">
+                    {selectedBooking.hall_name || selectedBooking.provider_name || "-"}
+                  </p>
+                </div>
+
+                {/* Guest Count (for halls) */}
+                {role === "hall_owner" && (selectedBooking.guest_count_men || selectedBooking.guest_count_women) && (
+                  <div className="bg-muted/50 rounded-xl p-3 text-right">
+                    <div className="flex items-center gap-2 justify-end mb-1">
+                      <span className="text-sm text-muted-foreground">عدد الضيوف</span>
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <p className="font-arabic font-medium">
+                      {selectedBooking.guest_count_men || 0} رجال • {selectedBooking.guest_count_women || 0} نساء
+                    </p>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {selectedBooking.notes && (
+                  <div className="bg-muted/50 rounded-xl p-3 text-right">
+                    <div className="flex items-center gap-2 justify-end mb-1">
+                      <span className="text-sm text-muted-foreground">ملاحظات</span>
+                      <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <p className="font-arabic text-sm text-foreground">
+                      {selectedBooking.notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Created At */}
+                {selectedBooking.created_at && (
+                  <div className="text-center text-xs text-muted-foreground pt-4 border-t">
+                    تم إنشاء الحجز في {format(new Date(selectedBooking.created_at), "d MMMM yyyy - HH:mm", { locale: ar })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
