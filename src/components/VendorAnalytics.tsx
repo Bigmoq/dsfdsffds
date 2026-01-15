@@ -30,6 +30,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -109,6 +110,32 @@ export function VendorAnalytics() {
   const [selectedBooking, setSelectedBooking] = useState<SelectedBooking>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    status: string;
+    title: string;
+    description: string;
+  }>({ open: false, status: "", title: "", description: "" });
+
+  const statusConfirmations: { [key: string]: { title: string; description: string } } = {
+    accepted: { title: "تأكيد قبول الحجز", description: "هل أنت متأكد من قبول هذا الحجز؟ سيتم إشعار العميل بالموافقة." },
+    confirmed: { title: "تأكيد الحجز", description: "هل أنت متأكد من تأكيد هذا الحجز؟ سيتم إشعار العميل." },
+    rejected: { title: "تأكيد رفض الحجز", description: "هل أنت متأكد من رفض هذا الحجز؟ سيتم إشعار العميل بالرفض." },
+    cancelled: { title: "تأكيد إلغاء الحجز", description: "هل أنت متأكد من إلغاء هذا الحجز؟ لا يمكن التراجع عن هذا الإجراء." },
+    completed: { title: "تأكيد إكمال الحجز", description: "هل أنت متأكد من وضع علامة مكتمل على هذا الحجز؟" },
+  };
+
+  const openConfirmDialog = (status: string) => {
+    const confirmation = statusConfirmations[status] || { title: "تأكيد", description: "هل أنت متأكد؟" };
+    setConfirmDialog({ open: true, status, ...confirmation });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (selectedBooking && confirmDialog.status) {
+      await handleUpdateStatus(selectedBooking.id, confirmDialog.status);
+    }
+    setConfirmDialog({ open: false, status: "", title: "", description: "" });
+  };
 
   const handleBookingClick = (booking: AnalyticsData['recentBookings'][0]) => {
     setSelectedBooking(booking);
@@ -997,27 +1024,19 @@ export function VendorAnalytics() {
                     <div className="flex gap-2">
                       <Button
                         className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
-                        onClick={() => handleUpdateStatus(selectedBooking.id, role === "hall_owner" ? "accepted" : "confirmed")}
+                        onClick={() => openConfirmDialog(role === "hall_owner" ? "accepted" : "confirmed")}
                         disabled={updatingStatus}
                       >
-                        {updatingStatus ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Check className="w-4 h-4" />
-                        )}
+                        <Check className="w-4 h-4" />
                         قبول الحجز
                       </Button>
                       <Button
                         variant="destructive"
                         className="flex-1 gap-2"
-                        onClick={() => handleUpdateStatus(selectedBooking.id, "rejected")}
+                        onClick={() => openConfirmDialog("rejected")}
                         disabled={updatingStatus}
                       >
-                        {updatingStatus ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <XCircle className="w-4 h-4" />
-                        )}
+                        <XCircle className="w-4 h-4" />
                         رفض الحجز
                       </Button>
                     </div>
@@ -1030,27 +1049,19 @@ export function VendorAnalytics() {
                     <div className="flex gap-2">
                       <Button
                         className="flex-1 gap-2"
-                        onClick={() => handleUpdateStatus(selectedBooking.id, "completed")}
+                        onClick={() => openConfirmDialog("completed")}
                         disabled={updatingStatus}
                       >
-                        {updatingStatus ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Check className="w-4 h-4" />
-                        )}
+                        <Check className="w-4 h-4" />
                         وضع علامة مكتمل
                       </Button>
                       <Button
                         variant="outline"
                         className="flex-1 gap-2 text-destructive border-destructive hover:bg-destructive/10"
-                        onClick={() => handleUpdateStatus(selectedBooking.id, "cancelled")}
+                        onClick={() => openConfirmDialog("cancelled")}
                         disabled={updatingStatus}
                       >
-                        {updatingStatus ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Ban className="w-4 h-4" />
-                        )}
+                        <Ban className="w-4 h-4" />
                         إلغاء الحجز
                       </Button>
                     </div>
@@ -1061,6 +1072,29 @@ export function VendorAnalytics() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog({ ...confirmDialog, open: false })}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-right font-arabic">{confirmDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription className="text-right font-arabic">
+              {confirmDialog.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogAction
+              onClick={handleConfirmStatusChange}
+              disabled={updatingStatus}
+              className={confirmDialog.status === "rejected" || confirmDialog.status === "cancelled" ? "bg-destructive hover:bg-destructive/90" : ""}
+            >
+              {updatingStatus ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+              تأكيد
+            </AlertDialogAction>
+            <AlertDialogCancel disabled={updatingStatus}>إلغاء</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
