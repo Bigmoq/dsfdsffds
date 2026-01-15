@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   TrendingUp, 
   TrendingDown,
@@ -24,7 +24,8 @@ import {
   XCircle,
   Ban,
   Filter,
-  SlidersHorizontal
+  SlidersHorizontal,
+  MoreVertical
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { ar } from "date-fns/locale";
 import { 
@@ -119,7 +121,10 @@ export function VendorAnalytics() {
     status: string;
     title: string;
     description: string;
+    bookingId?: string;
   }>({ open: false, status: "", title: "", description: "" });
+  const [longPressBooking, setLongPressBooking] = useState<string | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   const filterOptions = [
     { value: "pending", label: "قيد الانتظار", color: "bg-amber-500", icon: Clock },
@@ -154,14 +159,15 @@ export function VendorAnalytics() {
     completed: { title: "تأكيد إكمال الحجز", description: "هل أنت متأكد من وضع علامة مكتمل على هذا الحجز؟" },
   };
 
-  const openConfirmDialog = (status: string) => {
+  const openConfirmDialog = (status: string, bookingId?: string) => {
     const confirmation = statusConfirmations[status] || { title: "تأكيد", description: "هل أنت متأكد؟" };
-    setConfirmDialog({ open: true, status, ...confirmation });
+    setConfirmDialog({ open: true, status, bookingId, ...confirmation });
   };
 
   const handleConfirmStatusChange = async () => {
-    if (selectedBooking && confirmDialog.status) {
-      await handleUpdateStatus(selectedBooking.id, confirmDialog.status);
+    const bookingId = confirmDialog.bookingId || selectedBooking?.id;
+    if (bookingId && confirmDialog.status) {
+      await handleUpdateStatus(bookingId, confirmDialog.status);
     }
     setConfirmDialog({ open: false, status: "", title: "", description: "" });
   };
@@ -169,6 +175,33 @@ export function VendorAnalytics() {
   const handleBookingClick = (booking: AnalyticsData['recentBookings'][0]) => {
     setSelectedBooking(booking);
     setSheetOpen(true);
+  };
+
+  const handleQuickStatusChange = (booking: AnalyticsData['recentBookings'][0], newStatus: string) => {
+    setSelectedBooking(booking);
+    openConfirmDialog(newStatus, booking.id);
+  };
+
+  const getAvailableStatusActions = (currentStatus: string) => {
+    switch (currentStatus) {
+      case "pending":
+        return [
+          { value: "accepted", label: "قبول", icon: Check, color: "text-green-600" },
+          { value: "rejected", label: "رفض", icon: XCircle, color: "text-red-600" },
+        ];
+      case "accepted":
+        return [
+          { value: "confirmed", label: "تأكيد", icon: Check, color: "text-green-600" },
+          { value: "cancelled", label: "إلغاء", icon: Ban, color: "text-gray-600" },
+        ];
+      case "confirmed":
+        return [
+          { value: "completed", label: "مكتمل", icon: Check, color: "text-blue-600" },
+          { value: "cancelled", label: "إلغاء", icon: Ban, color: "text-gray-600" },
+        ];
+      default:
+        return [];
+    }
   };
 
   const handleWhatsApp = (phone: string) => {
@@ -957,45 +990,82 @@ export function VendorAnalytics() {
           <CardContent>
             {filteredBookings.length > 0 ? (
               <div className="space-y-3">
-                {filteredBookings.map((booking, index) => (
-                  <motion.div
-                    key={booking.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-xl cursor-pointer hover:bg-muted/80 transition-colors"
-                    onClick={() => handleBookingClick(booking)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-arabic ${getStatusColor(booking.status)}`}>
-                        {getStatusLabel(booking.status)}
-                      </span>
-                      <span className="font-bold text-foreground">
-                        {booking.total_price.toLocaleString()} ر.س
-                      </span>
-                      {booking.is_paid ? (
-                        <span className="px-2 py-1 rounded-lg text-xs font-arabic bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                          مدفوع
+                {filteredBookings.map((booking, index) => {
+                  const availableActions = getAvailableStatusActions(booking.status);
+                  return (
+                    <motion.div
+                      key={booking.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-xl cursor-pointer hover:bg-muted/80 transition-colors group"
+                      onClick={() => handleBookingClick(booking)}
+                    >
+                      <div className="flex items-center gap-2">
+                        {/* Quick Actions Dropdown */}
+                        {availableActions.length > 0 && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-40">
+                              <DropdownMenuLabel className="font-arabic text-right">تغيير الحالة</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {availableActions.map((action) => {
+                                const Icon = action.icon;
+                                return (
+                                  <DropdownMenuItem
+                                    key={action.value}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleQuickStatusChange(booking, action.value);
+                                    }}
+                                    className="flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Icon className={`h-4 w-4 ${action.color}`} />
+                                    <span className="font-arabic">{action.label}</span>
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                        <span className={`px-2 py-1 rounded-lg text-xs font-arabic ${getStatusColor(booking.status)}`}>
+                          {getStatusLabel(booking.status)}
                         </span>
-                      ) : (
-                        <span className="px-2 py-1 rounded-lg text-xs font-arabic bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                          غير مدفوع
+                        <span className="font-bold text-foreground">
+                          {booking.total_price.toLocaleString()} ر.س
                         </span>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="font-arabic text-sm font-medium text-foreground">
-                        {booking.customer_name || "غير معروف"}
-                      </p>
-                      <p className="font-arabic text-xs text-muted-foreground">
-                        {booking.hall_name || booking.provider_name || (role === "hall_owner" ? "قاعة" : "خدمة")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(booking.booking_date), "d MMMM yyyy", { locale: ar })}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
+                        {booking.is_paid ? (
+                          <span className="px-2 py-1 rounded-lg text-xs font-arabic bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            مدفوع
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 rounded-lg text-xs font-arabic bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                            غير مدفوع
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-arabic text-sm font-medium text-foreground">
+                          {booking.customer_name || "غير معروف"}
+                        </p>
+                        <p className="font-arabic text-xs text-muted-foreground">
+                          {booking.hall_name || booking.provider_name || (role === "hall_owner" ? "قاعة" : "خدمة")}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(booking.booking_date), "d MMMM yyyy", { locale: ar })}
+                        </p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">
