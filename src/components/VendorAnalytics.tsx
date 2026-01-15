@@ -19,8 +19,12 @@ import {
   CreditCard,
   Clock,
   MapPin,
-  X
+  X,
+  Check,
+  XCircle,
+  Ban
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,11 +102,13 @@ type SelectedBooking = AnalyticsData['recentBookings'][0] | null;
 
 export function VendorAnalytics() {
   const { user, role } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");
   const [selectedBooking, setSelectedBooking] = useState<SelectedBooking>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const handleBookingClick = (booking: AnalyticsData['recentBookings'][0]) => {
     setSelectedBooking(booking);
@@ -117,6 +123,58 @@ export function VendorAnalytics() {
 
   const handleCall = (phone: string) => {
     window.open(`tel:${phone}`, "_self");
+  };
+
+  const handleUpdateStatus = async (bookingId: string, newStatus: string) => {
+    if (!role) return;
+    setUpdatingStatus(true);
+
+    try {
+      const tableName = role === "hall_owner" ? "hall_bookings" : "service_bookings";
+      
+      const { error } = await supabase
+        .from(tableName)
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq("id", bookingId);
+
+      if (error) throw error;
+
+      // Update local state
+      if (selectedBooking) {
+        setSelectedBooking({ ...selectedBooking, status: newStatus });
+      }
+      
+      // Update analytics state
+      if (analytics) {
+        const updatedBookings = analytics.recentBookings.map(b => 
+          b.id === bookingId ? { ...b, status: newStatus } : b
+        );
+        setAnalytics({ ...analytics, recentBookings: updatedBookings });
+      }
+
+      const statusMessages: { [key: string]: { title: string; description: string } } = {
+        accepted: { title: "تم قبول الحجز", description: "سيتم إشعار العميل بالموافقة" },
+        confirmed: { title: "تم تأكيد الحجز", description: "سيتم إشعار العميل بالتأكيد" },
+        rejected: { title: "تم رفض الحجز", description: "سيتم إشعار العميل بالرفض" },
+        cancelled: { title: "تم إلغاء الحجز", description: "تم إلغاء الحجز بنجاح" },
+        completed: { title: "تم إكمال الحجز", description: "تم وضع علامة مكتمل على الحجز" },
+      };
+
+      const message = statusMessages[newStatus] || { title: "تم التحديث", description: "تم تحديث حالة الحجز" };
+      toast({
+        title: message.title,
+        description: message.description,
+      });
+    } catch (error) {
+      console.error("Error updating booking status:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل تحديث حالة الحجز",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   useEffect(() => {
@@ -929,6 +987,73 @@ export function VendorAnalytics() {
                 {selectedBooking.created_at && (
                   <div className="text-center text-xs text-muted-foreground pt-4 border-t">
                     تم إنشاء الحجز في {format(new Date(selectedBooking.created_at), "d MMMM yyyy - HH:mm", { locale: ar })}
+                  </div>
+                )}
+
+                {/* Status Actions */}
+                {selectedBooking.status === "pending" && (
+                  <div className="space-y-3 pt-4 border-t">
+                    <h3 className="font-arabic font-medium text-foreground text-right">إجراءات الحجز</h3>
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
+                        onClick={() => handleUpdateStatus(selectedBooking.id, role === "hall_owner" ? "accepted" : "confirmed")}
+                        disabled={updatingStatus}
+                      >
+                        {updatingStatus ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Check className="w-4 h-4" />
+                        )}
+                        قبول الحجز
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="flex-1 gap-2"
+                        onClick={() => handleUpdateStatus(selectedBooking.id, "rejected")}
+                        disabled={updatingStatus}
+                      >
+                        {updatingStatus ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <XCircle className="w-4 h-4" />
+                        )}
+                        رفض الحجز
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {(selectedBooking.status === "accepted" || selectedBooking.status === "confirmed") && (
+                  <div className="space-y-3 pt-4 border-t">
+                    <h3 className="font-arabic font-medium text-foreground text-right">إجراءات الحجز</h3>
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 gap-2"
+                        onClick={() => handleUpdateStatus(selectedBooking.id, "completed")}
+                        disabled={updatingStatus}
+                      >
+                        {updatingStatus ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Check className="w-4 h-4" />
+                        )}
+                        وضع علامة مكتمل
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 gap-2 text-destructive border-destructive hover:bg-destructive/10"
+                        onClick={() => handleUpdateStatus(selectedBooking.id, "cancelled")}
+                        disabled={updatingStatus}
+                      >
+                        {updatingStatus ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Ban className="w-4 h-4" />
+                        )}
+                        إلغاء الحجز
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
