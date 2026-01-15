@@ -22,7 +22,9 @@ import {
   X,
   Check,
   XCircle,
-  Ban
+  Ban,
+  Filter,
+  SlidersHorizontal
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -110,12 +112,39 @@ export function VendorAnalytics() {
   const [selectedBooking, setSelectedBooking] = useState<SelectedBooking>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     status: string;
     title: string;
     description: string;
   }>({ open: false, status: "", title: "", description: "" });
+
+  const filterOptions = [
+    { value: "pending", label: "قيد الانتظار", color: "bg-amber-500", icon: Clock },
+    { value: "accepted", label: "مقبول", color: "bg-green-500", icon: Check },
+    { value: "confirmed", label: "مؤكد", color: "bg-green-500", icon: Check },
+    { value: "completed", label: "مكتمل", color: "bg-blue-500", icon: Check },
+    { value: "rejected", label: "مرفوض", color: "bg-red-500", icon: XCircle },
+    { value: "cancelled", label: "ملغي", color: "bg-gray-500", icon: Ban },
+  ];
+
+  const toggleStatusFilter = (status: string) => {
+    setStatusFilter(prev => 
+      prev.includes(status) 
+        ? prev.filter(s => s !== status)
+        : [...prev, status]
+    );
+  };
+
+  const clearFilters = () => {
+    setStatusFilter([]);
+  };
+
+  const filteredBookings = analytics?.recentBookings.filter(booking => 
+    statusFilter.length === 0 || statusFilter.includes(booking.status)
+  ) || [];
 
   const statusConfirmations: { [key: string]: { title: string; description: string } } = {
     accepted: { title: "تأكيد قبول الحجز", description: "هل أنت متأكد من قبول هذا الحجز؟ سيتم إشعار العميل بالموافقة." },
@@ -821,17 +850,119 @@ export function VendorAnalytics() {
         transition={{ delay: 0.6 }}
       >
         <Card className="card-luxe">
-          <CardHeader>
-            <CardTitle className="font-display text-lg text-right">
-              آخر الحجوزات
-            </CardTitle>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span className="font-arabic">تصفية</span>
+                {statusFilter.length > 0 && (
+                  <span className="bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {statusFilter.length}
+                  </span>
+                )}
+              </Button>
+              <CardTitle className="font-display text-lg text-right">
+                آخر الحجوزات
+              </CardTitle>
+            </div>
+            
+            {/* Advanced Filter Section */}
+            <motion.div
+              initial={false}
+              animate={{ 
+                height: showFilters ? "auto" : 0,
+                opacity: showFilters ? 1 : 0
+              }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs gap-1 text-muted-foreground hover:text-foreground"
+                    onClick={clearFilters}
+                    disabled={statusFilter.length === 0}
+                  >
+                    <X className="w-3 h-3" />
+                    مسح الكل
+                  </Button>
+                  <p className="text-sm font-arabic text-muted-foreground">اختر حالات الحجز للتصفية</p>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 justify-end">
+                  {filterOptions.map((option) => {
+                    const isSelected = statusFilter.includes(option.value);
+                    const Icon = option.icon;
+                    return (
+                      <motion.button
+                        key={option.value}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => toggleStatusFilter(option.value)}
+                        className={`
+                          relative flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-arabic
+                          transition-all duration-200 border
+                          ${isSelected 
+                            ? `${option.color} text-white border-transparent shadow-lg` 
+                            : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                          }
+                        `}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{option.label}</span>
+                        {isSelected && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="absolute -top-1 -right-1 w-4 h-4 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center shadow"
+                          >
+                            <Check className="w-3 h-3 text-green-600" />
+                          </motion.div>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                
+                {/* Quick Stats for Selected Filters */}
+                {statusFilter.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-primary/5 border border-primary/20 rounded-xl p-3 mt-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-arabic text-primary font-medium">
+                          {filteredBookings.length} حجز
+                        </span>
+                      </div>
+                      <span className="text-xs font-arabic text-muted-foreground">
+                        من أصل {analytics?.recentBookings.length || 0}
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
           </CardHeader>
           <CardContent>
-            {analytics.recentBookings.length > 0 ? (
+            {filteredBookings.length > 0 ? (
               <div className="space-y-3">
-                {analytics.recentBookings.map((booking) => (
-                  <div
+                {filteredBookings.map((booking, index) => (
+                  <motion.div
                     key={booking.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
                     className="flex items-center justify-between p-3 bg-muted/50 rounded-xl cursor-pointer hover:bg-muted/80 transition-colors"
                     onClick={() => handleBookingClick(booking)}
                   >
@@ -863,12 +994,31 @@ export function VendorAnalytics() {
                         {format(new Date(booking.booking_date), "d MMMM yyyy", { locale: ar })}
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground font-arabic">
-                لا توجد حجوزات حتى الآن
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+                  <Filter className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground font-arabic">
+                  {statusFilter.length > 0 
+                    ? "لا توجد حجوزات تطابق معايير التصفية"
+                    : "لا توجد حجوزات حتى الآن"
+                  }
+                </p>
+                {statusFilter.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 gap-1 font-arabic"
+                    onClick={clearFilters}
+                  >
+                    <X className="w-4 h-4" />
+                    مسح التصفية
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
