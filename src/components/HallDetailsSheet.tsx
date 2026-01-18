@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { 
   MapPin, Star, Users, Calendar, Check, X, 
   ChevronLeft, ChevronRight, Minus, Plus, MessageCircle,
-  CheckCircle, XCircle, AlertCircle, Clock
+  CheckCircle, XCircle, AlertCircle, Clock, Navigation
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { LocationMap } from "./LocationMap";
+import { useGeolocation } from "@/hooks/useGeolocation";
 
 type AvailabilityStatus = 'available' | 'booked' | 'resale';
 
@@ -41,6 +43,8 @@ interface DatabaseHall {
   price_per_chair_weekend?: number | null;
   min_capacity_men?: number | null;
   min_capacity_women?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface LegacyHall {
@@ -82,6 +86,9 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
   const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Get user's geolocation for distance calculation
+  const { latitude: userLat, longitude: userLon } = useGeolocation();
 
   // Check if hall is per-chair pricing
   const isPerChair = hall && isDatabaseHall(hall) && hall.pricing_type === 'per_chair';
@@ -148,6 +155,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
     id: hall.id,
     nameAr: hall.name_ar,
     cityAr: hall.city,
+    address: hall.address,
     image: hall.cover_image || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800',
     priceWeekday: hall.price_weekday,
     priceWeekend: hall.price_weekend,
@@ -163,10 +171,13 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
     isPerChair: !!isPerChair,
     pricePerChairWeekday: hall.price_per_chair_weekday || 0,
     pricePerChairWeekend: hall.price_per_chair_weekend || 0,
+    latitude: hall.latitude,
+    longitude: hall.longitude,
   } : {
     id: hall.id,
     nameAr: hall.nameAr,
     cityAr: hall.cityAr,
+    address: undefined,
     image: hall.image,
     priceWeekday: hall.price,
     priceWeekend: Math.round(hall.price * 1.2),
@@ -182,6 +193,8 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
     isPerChair: false,
     pricePerChairWeekday: 0,
     pricePerChairWeekend: 0,
+    latitude: undefined,
+    longitude: undefined,
   };
 
   const today = startOfDay(new Date());
@@ -404,6 +417,24 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
           <MessageCircle className="w-5 h-5" />
           <span className="font-arabic">تواصل عبر واتساب</span>
         </Button>
+      )}
+
+      {/* Location Map */}
+      {normalizedHall.latitude && normalizedHall.longitude && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-end gap-2">
+            <h4 className="font-semibold text-foreground font-arabic">الموقع</h4>
+            <Navigation className="w-5 h-5 text-primary" />
+          </div>
+          <LocationMap
+            latitude={normalizedHall.latitude}
+            longitude={normalizedHall.longitude}
+            name={normalizedHall.nameAr}
+            address={normalizedHall.address}
+            userLatitude={userLat}
+            userLongitude={userLon}
+          />
+        </div>
       )}
 
       {/* Quick Availability - Next 7 Days */}
