@@ -62,6 +62,13 @@ export function NotificationsSheet({ open: controlledOpen, onOpenChange, showTri
     enabled: !!user?.id,
   });
 
+  // Notification sound
+  const playNotificationSound = () => {
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleVcWAXe+0NrMbTUKPYTG0s+OUQO/ecfWz5JQBraEx9TQkVADuIPH1dCSUAO5g8fV0JJQA7mDx9XQklADuYPH1dCSUAO5g8fV0JJQA7mDx9XQklADuYPH1dCSUAO5g8fV0JJQA7mDx9XQklADuYPH1dCSUAO5g8fV0JJQAw==');
+    audio.volume = 0.5;
+    audio.play().catch(() => {});
+  };
+
   // Subscribe to realtime notifications
   useEffect(() => {
     if (!user?.id) return;
@@ -77,6 +84,8 @@ export function NotificationsSheet({ open: controlledOpen, onOpenChange, showTri
           filter: `user_id=eq.${user.id}`,
         },
         () => {
+          // Play sound and refresh
+          playNotificationSound();
           queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
         }
       )
