@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { saudiCities } from "@/data/weddingData";
+import { LocationPicker } from "@/components/LocationPicker";
 
 interface AddHallSheetProps {
   open: boolean;
@@ -29,6 +30,8 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
     name_ar: "",
@@ -51,6 +54,11 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
 
   const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLocationChange = (lat: number | null, lng: number | null) => {
+    setLatitude(lat);
+    setLongitude(lng);
   };
 
   const uploadImage = async (file: File, folder: string): Promise<string | null> => {
@@ -201,6 +209,8 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
     });
     setCoverImage(null);
     setGalleryImages([]);
+    setLatitude(null);
+    setLongitude(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -231,6 +241,8 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
         gallery_images: galleryImages.length > 0 ? galleryImages : null,
         phone: formData.phone || null,
         whatsapp_enabled: formData.whatsapp_enabled,
+        latitude: latitude,
+        longitude: longitude,
       };
 
       const { error } = await supabase.from("halls").insert(insertData);
@@ -409,6 +421,13 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
               dir="rtl"
             />
           </div>
+
+          {/* Location Picker */}
+          <LocationPicker
+            latitude={latitude}
+            longitude={longitude}
+            onLocationChange={handleLocationChange}
+          />
           
           <div className="space-y-2">
             <Label className="font-arabic">وصف القاعة</Label>
