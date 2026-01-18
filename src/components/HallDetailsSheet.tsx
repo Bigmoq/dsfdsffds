@@ -402,41 +402,6 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
         )}
       </div>
 
-      {/* WhatsApp Contact Button */}
-      {normalizedHall.phone && normalizedHall.whatsappEnabled && (
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            const phone = normalizedHall.phone!.replace(/\D/g, '');
-            const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن قاعة ${normalizedHall.nameAr}`);
-            window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-          }}
-          className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white gap-2"
-          size="lg"
-        >
-          <MessageCircle className="w-5 h-5" />
-          <span className="font-arabic">تواصل عبر واتساب</span>
-        </Button>
-      )}
-
-      {/* Location Map */}
-      {normalizedHall.latitude && normalizedHall.longitude && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-end gap-2">
-            <h4 className="font-semibold text-foreground font-arabic">الموقع</h4>
-            <Navigation className="w-5 h-5 text-primary" />
-          </div>
-          <LocationMap
-            latitude={normalizedHall.latitude}
-            longitude={normalizedHall.longitude}
-            name={normalizedHall.nameAr}
-            address={normalizedHall.address}
-            userLatitude={userLat}
-            userLongitude={userLon}
-          />
-        </div>
-      )}
-
       {/* Quick Availability - Next 7 Days */}
       <div className="space-y-3">
         <div className="flex items-center justify-end gap-2">
@@ -517,12 +482,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
         </p>
       </div>
 
-      {/* Reviews Section */}
-      <div className="space-y-2">
-        <h4 className="font-semibold text-foreground text-right">التقييمات</h4>
-        <HallReviews hallId={hall.id} hallName={normalizedHall.nameAr} />
-      </div>
-
+      {/* Book Button - After Availability */}
       <Button 
         className="w-full gold-gradient text-white"
         size="lg"
@@ -531,6 +491,47 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
         <Calendar className="w-5 h-5 ml-2" />
         اختر التاريخ والحجز
       </Button>
+
+      {/* Reviews Section */}
+      <div className="space-y-2">
+        <h4 className="font-semibold text-foreground text-right">التقييمات</h4>
+        <HallReviews hallId={hall.id} hallName={normalizedHall.nameAr} />
+      </div>
+
+      {/* Location Map - At the end */}
+      {normalizedHall.latitude && normalizedHall.longitude && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-end gap-2">
+            <h4 className="font-semibold text-foreground font-arabic">الموقع</h4>
+            <Navigation className="w-5 h-5 text-primary" />
+          </div>
+          <LocationMap
+            latitude={normalizedHall.latitude}
+            longitude={normalizedHall.longitude}
+            name={normalizedHall.nameAr}
+            address={normalizedHall.address}
+            userLatitude={userLat}
+            userLongitude={userLon}
+          />
+        </div>
+      )}
+
+      {/* WhatsApp Contact Button - At the very end */}
+      {normalizedHall.phone && normalizedHall.whatsappEnabled && (
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            const phone = normalizedHall.phone!.replace(/\D/g, '');
+            const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن قاعة ${normalizedHall.nameAr}`);
+            window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+          }}
+          className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white gap-2"
+          size="lg"
+        >
+          <MessageCircle className="w-5 h-5" />
+          <span className="font-arabic">تواصل عبر واتساب</span>
+        </Button>
+      )}
     </motion.div>
   );
 
