@@ -8,6 +8,8 @@ import { DressesScreen } from "@/components/DressesScreen";
 import { FavoritesScreen } from "@/components/FavoritesScreen";
 import { ProfileScreen } from "@/components/ProfileScreen";
 import { NotificationsSheet } from "@/components/NotificationsSheet";
+import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { VendorDashboard } from "@/components/VendorDashboard";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,6 +56,9 @@ const Index = () => {
         </Helmet>
         
         <div className="min-h-screen bg-background overflow-x-hidden pb-20" dir="rtl">
+          {/* Push Notification Permission Banner */}
+          <NotificationPermissionBanner />
+          
           {/* Notifications Button */}
           <div className="fixed top-4 left-4 z-50">
             <NotificationsSheet />
