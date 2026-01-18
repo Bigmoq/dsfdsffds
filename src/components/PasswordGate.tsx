@@ -1,0 +1,85 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Lock, Crown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+// كلمة المرور - يمكنك تغييرها هنا
+const SITE_PASSWORD = "zafaf2025";
+
+interface PasswordGateProps {
+  children: React.ReactNode;
+}
+
+export function PasswordGate({ children }: PasswordGateProps) {
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    return localStorage.getItem("site_unlocked") === "true";
+  });
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (password === SITE_PASSWORD) {
+      localStorage.setItem("site_unlocked", "true");
+      setIsUnlocked(true);
+      setError("");
+    } else {
+      setError("كلمة المرور غير صحيحة");
+    }
+  };
+
+  if (isUnlocked) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-6" dir="rtl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-sm"
+      >
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full gold-gradient flex items-center justify-center shadow-xl">
+            <Crown className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="font-display text-3xl font-bold gold-text-gradient mb-2">
+            زفـــاف
+          </h1>
+          <p className="text-muted-foreground font-arabic text-sm">
+            الموقع محمي بكلمة مرور
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="relative">
+            <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              type="password"
+              placeholder="أدخل كلمة المرور"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pr-10 py-6 text-center font-arabic"
+              autoFocus
+            />
+          </div>
+          
+          {error && (
+            <p className="text-destructive text-sm text-center font-arabic">
+              {error}
+            </p>
+          )}
+          
+          <Button
+            type="submit"
+            className="w-full py-6 gold-gradient text-white font-arabic"
+          >
+            دخول
+          </Button>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
