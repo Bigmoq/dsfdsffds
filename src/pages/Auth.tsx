@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, User, Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, ArrowLeft, Loader2, KeyRound, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,7 @@ const nameSchema = z.string().min(2, "الاسم يجب أن يكون حرفين
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [mode, setMode] = useState<"select" | "login" | "signup">("select");
+  const [mode, setMode] = useState<"select" | "login" | "signup" | "forgot" | "reset-sent">("select");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -51,9 +51,12 @@ export default function Auth() {
       newErrors.email = emailResult.error.errors[0].message;
     }
     
-    const passwordResult = passwordSchema.safeParse(password);
-    if (!passwordResult.success) {
-      newErrors.password = passwordResult.error.errors[0].message;
+    // Only validate password for login and signup modes
+    if (mode === "login" || mode === "signup") {
+      const passwordResult = passwordSchema.safeParse(password);
+      if (!passwordResult.success) {
+        newErrors.password = passwordResult.error.errors[0].message;
+      }
     }
     
     if (mode === "signup") {
@@ -65,6 +68,43 @@ export default function Auth() {
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const emailResult = emailSchema.safeParse(email);
+    if (!emailResult.success) {
+      setErrors({ email: emailResult.error.errors[0].message });
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset`,
+      });
+      
+      if (error) {
+        toast({
+          title: "خطأ",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setMode("reset-sent");
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ غير متوقع",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -205,7 +245,7 @@ export default function Auth() {
   return (
     <>
       <Helmet>
-        <title>{mode === "login" ? "تسجيل الدخول" : mode === "signup" ? "إنشاء حساب" : "مرحباً"} | زفاف</title>
+        <title>{mode === "login" ? "تسجيل الدخول" : mode === "signup" ? "إنشاء حساب" : mode === "forgot" ? "استعادة كلمة المرور" : mode === "reset-sent" ? "تم الإرسال" : "مرحباً"} | زفاف</title>
         <meta name="description" content="سجل دخولك أو أنشئ حساب جديد للاستفادة من جميع مميزات زفاف" />
       </Helmet>
       
@@ -238,11 +278,15 @@ export default function Auth() {
               {mode === "select" && "مرحباً بك"}
               {mode === "login" && "تسجيل الدخول"}
               {mode === "signup" && "إنشاء حساب جديد"}
+              {mode === "forgot" && "استعادة كلمة المرور"}
+              {mode === "reset-sent" && "تم الإرسال"}
             </h1>
             <p className="text-white/80 font-arabic text-sm">
               {mode === "select" && "اختر طريقة الدخول المناسبة لك"}
               {mode === "login" && "أدخل بياناتك للمتابعة"}
               {mode === "signup" && "أنشئ حسابك للاستفادة من جميع المميزات"}
+              {mode === "forgot" && "أدخل بريدك الإلكتروني لإرسال رابط الاستعادة"}
+              {mode === "reset-sent" && "تحقق من بريدك الإلكتروني"}
             </p>
           </motion.div>
         </div>
@@ -414,6 +458,20 @@ export default function Auth() {
                       </span>
                     )}
                   </Button>
+                  
+                  {/* Forgot Password Link - Only show on login */}
+                  {mode === "login" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("forgot");
+                        setErrors({});
+                      }}
+                      className="w-full text-center font-arabic text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      نسيت كلمة المرور؟
+                    </button>
+                  )}
                 </form>
                 
                 <div className="mt-6 text-center">
@@ -430,6 +488,114 @@ export default function Auth() {
                     </span>
                   </button>
                 </div>
+              </motion.div>
+            )}
+            
+            {/* Forgot Password Form */}
+            {mode === "forgot" && (
+              <motion.div
+                key="forgot"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="card-luxe rounded-2xl p-6"
+              >
+                <div className="flex justify-center mb-6">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <KeyRound className="w-8 h-8 text-primary" />
+                  </div>
+                </div>
+                
+                <form onSubmit={handlePasswordReset} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email" className="font-arabic text-right block">
+                      البريد الإلكتروني
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="reset-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="example@email.com"
+                        className="pr-10 text-right"
+                        dir="ltr"
+                      />
+                      <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    </div>
+                    {errors.email && (
+                      <p className="text-destructive text-sm font-arabic">{errors.email}</p>
+                    )}
+                  </div>
+                  
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full gold-gradient text-white hover:opacity-90 py-6"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      <span className="font-arabic text-lg">إرسال رابط الاستعادة</span>
+                    )}
+                  </Button>
+                </form>
+                
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={() => {
+                      setMode("login");
+                      setErrors({});
+                    }}
+                    className="font-arabic text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    العودة إلى{" "}
+                    <span className="text-primary font-semibold">تسجيل الدخول</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+            
+            {/* Reset Email Sent Confirmation */}
+            {mode === "reset-sent" && (
+              <motion.div
+                key="reset-sent"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="card-luxe rounded-2xl p-6 text-center"
+              >
+                <div className="flex justify-center mb-6">
+                  <div className="w-20 h-20 rounded-full bg-available/10 flex items-center justify-center">
+                    <CheckCircle className="w-10 h-10 text-available" />
+                  </div>
+                </div>
+                
+                <h3 className="font-display text-xl font-bold text-foreground mb-3">
+                  تم إرسال رابط الاستعادة!
+                </h3>
+                
+                <p className="text-muted-foreground font-arabic text-sm mb-2">
+                  تم إرسال رابط استعادة كلمة المرور إلى:
+                </p>
+                
+                <p className="text-primary font-semibold mb-6 dir-ltr">
+                  {email}
+                </p>
+                
+                <p className="text-muted-foreground font-arabic text-xs mb-6">
+                  إذا لم تجد الرسالة، تحقق من مجلد الرسائل غير المرغوب فيها (Spam)
+                </p>
+                
+                <Button
+                  onClick={() => {
+                    setMode("login");
+                    resetForm();
+                  }}
+                  className="w-full gold-gradient text-white hover:opacity-90 py-6"
+                >
+                  <span className="font-arabic text-lg">العودة لتسجيل الدخول</span>
+                </Button>
               </motion.div>
             )}
           </AnimatePresence>
