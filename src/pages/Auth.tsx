@@ -100,7 +100,7 @@ export default function Auth() {
       } else {
         const redirectUrl = `${window.location.origin}/onboarding`;
         
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -112,19 +112,41 @@ export default function Auth() {
         });
         
         if (error) {
-          if (error.message.includes("already registered")) {
+          // Check for various "already registered" error messages
+          const errorMsg = error.message.toLowerCase();
+          if (
+            errorMsg.includes("already registered") ||
+            errorMsg.includes("user already registered") ||
+            errorMsg.includes("email already") ||
+            errorMsg.includes("already exists")
+          ) {
             toast({
-              title: "المستخدم موجود",
-              description: "هذا البريد الإلكتروني مسجل بالفعل، جرب تسجيل الدخول",
+              title: "البريد الإلكتروني مستخدم",
+              description: "هذا البريد الإلكتروني مسجل مسبقاً، الرجاء تسجيل الدخول بدلاً من ذلك",
               variant: "destructive",
             });
+            // Switch to login mode for convenience
+            setMode("login");
           } else {
             toast({
-              title: "خطأ",
+              title: "خطأ في إنشاء الحساب",
               description: error.message,
               variant: "destructive",
             });
           }
+          return;
+        }
+        
+        // Check if user was actually created or if email already exists
+        // Supabase returns user data but with identities array empty if email exists
+        if (data?.user && data.user.identities && data.user.identities.length === 0) {
+          toast({
+            title: "البريد الإلكتروني مستخدم",
+            description: "هذا البريد الإلكتروني مسجل مسبقاً، الرجاء تسجيل الدخول بدلاً من ذلك",
+            variant: "destructive",
+          });
+          // Switch to login mode for convenience
+          setMode("login");
           return;
         }
         
