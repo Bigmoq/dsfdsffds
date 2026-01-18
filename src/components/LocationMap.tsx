@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MapPin, Navigation, ExternalLink } from "lucide-react";
+import { MapPin, Navigation, ExternalLink, Route } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calculateDistance, formatDistance } from "@/hooks/useGeolocation";
 
@@ -24,16 +24,25 @@ export function LocationMap({
     ? calculateDistance(userLatitude, userLongitude, latitude, longitude)
     : null;
 
-  const openInMaps = () => {
-    // Open in Google Maps with directions if user location available
+  const openInGoogleMaps = () => {
+    // Open location in Google Maps
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`,
+      '_blank'
+    );
+  };
+
+  const openDirections = () => {
+    // Open Google Maps with directions from user location
     if (userLatitude && userLongitude) {
       window.open(
         `https://www.google.com/maps/dir/${userLatitude},${userLongitude}/${latitude},${longitude}`,
         '_blank'
       );
     } else {
+      // If no user location, open directions without origin (Google Maps will ask for it)
       window.open(
-        `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`,
+        `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`,
         '_blank'
       );
     }
@@ -69,24 +78,34 @@ export function LocationMap({
         )}
       </div>
 
-      {/* Address and Actions */}
-      <div className="flex items-start justify-between gap-3">
+      {/* Address */}
+      {address && (
+        <div className="flex items-start gap-2 text-right">
+          <p className="text-sm text-muted-foreground font-arabic flex-1">{address}</p>
+          <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex gap-2">
         <Button
-          onClick={openInMaps}
-          variant="outline"
+          onClick={openDirections}
+          className="flex-1 gap-2"
           size="sm"
-          className="gap-2 shrink-0"
         >
-          <ExternalLink className="w-4 h-4" />
-          <span className="font-arabic">افتح في الخريطة</span>
+          <Route className="w-4 h-4" />
+          <span className="font-arabic">الاتجاهات</span>
         </Button>
         
-        {address && (
-          <div className="flex items-start gap-2 text-right">
-            <p className="text-sm text-muted-foreground font-arabic">{address}</p>
-            <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-          </div>
-        )}
+        <Button
+          onClick={openInGoogleMaps}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+        >
+          <ExternalLink className="w-4 h-4" />
+          <span className="font-arabic">افتح في قوقل ماب</span>
+        </Button>
       </div>
     </motion.div>
   );
