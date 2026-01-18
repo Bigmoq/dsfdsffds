@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
-import { MapPin, Star, Users, Heart } from "lucide-react";
+import { MapPin, Star, Users, Heart, Navigation } from "lucide-react";
 import { WeddingHall } from "@/data/weddingData";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays } from "date-fns";
 import { ar } from "date-fns/locale";
+import { DistanceBadge } from "./DistanceBadge";
 
 // Support both database schema and mock data schema
 interface DatabaseHall {
@@ -22,6 +23,8 @@ interface DatabaseHall {
   pricing_type?: string | null;
   price_per_chair_weekday?: number | null;
   price_per_chair_weekend?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 type HallData = WeddingHall | DatabaseHall;
@@ -30,6 +33,8 @@ interface HallCardProps {
   hall: HallData;
   index: number;
   onClick?: () => void;
+  userLatitude?: number | null;
+  userLongitude?: number | null;
 }
 
 // Type guards to check which schema we're dealing with
@@ -37,7 +42,7 @@ function isDatabaseHall(hall: HallData): hall is DatabaseHall {
   return 'name_ar' in hall;
 }
 
-export function HallCard({ hall, index, onClick }: HallCardProps) {
+export function HallCard({ hall, index, onClick, userLatitude, userLongitude }: HallCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   
   // Normalize data for both schemas
@@ -48,6 +53,8 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
   const capacityMen = isDatabaseHall(hall) ? hall.capacity_men : hall.capacityMen;
   const capacityWomen = isDatabaseHall(hall) ? hall.capacity_women : hall.capacityWomen;
   const rating = isDatabaseHall(hall) ? undefined : hall.rating;
+  const hallLatitude = isDatabaseHall(hall) ? hall.latitude : null;
+  const hallLongitude = isDatabaseHall(hall) ? hall.longitude : null;
   
   // Pricing logic
   const isPerChair = isDatabaseHall(hall) && hall.pricing_type === 'per_chair';
@@ -144,6 +151,15 @@ export function HallCard({ hall, index, onClick }: HallCardProps) {
             <span className="text-sm font-semibold text-white">{rating}</span>
           </div>
         )}
+
+        {/* Distance Badge */}
+        <DistanceBadge
+          hallLatitude={hallLatitude}
+          hallLongitude={hallLongitude}
+          userLatitude={userLatitude}
+          userLongitude={userLongitude}
+          className="absolute bottom-14 left-3"
+        />
         
         {/* Hall Name Overlay */}
         <div className="absolute bottom-3 left-3 right-3">

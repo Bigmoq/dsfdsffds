@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, SlidersHorizontal, MapPin, X } from "lucide-react";
+import { Search, SlidersHorizontal, MapPin, X, Navigation, Loader2 } from "lucide-react";
 import { cities } from "@/data/weddingData";
 import { HallCard } from "./HallCard";
 import { HallDetailsSheet } from "./HallDetailsSheet";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useGeolocation, calculateDistance } from "@/hooks/useGeolocation";
 
 export function HomeScreen() {
   const [selectedCity, setSelectedCity] = useState("all");
@@ -17,6 +18,10 @@ export function HomeScreen() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<HallFilters>(defaultFilters);
+  const [sortByDistance, setSortByDistance] = useState(false);
+
+  // Get user's geolocation
+  const { latitude: userLat, longitude: userLon, loading: geoLoading, error: geoError, requestLocation } = useGeolocation();
 
   // Fetch halls from database
   const { data: dbHalls = [], isLoading } = useQuery({
@@ -42,9 +47,9 @@ export function HomeScreen() {
     return count;
   }, [filters]);
 
-  // Filter halls based on search and filters
+  // Filter and sort halls based on search, filters, and distance
   const filteredHalls = useMemo(() => {
-    return dbHalls.filter((hall) => {
+    let halls = dbHalls.filter((hall) => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -77,7 +82,22 @@ export function HomeScreen() {
 
       return true;
     });
-  }, [searchQuery, selectedCity, filters, dbHalls]);
+
+    // Sort by distance if enabled and user location is available
+    if (sortByDistance && userLat && userLon) {
+      halls = halls.sort((a, b) => {
+        const distA = a.latitude && a.longitude 
+          ? calculateDistance(userLat, userLon, a.latitude, a.longitude)
+          : Infinity;
+        const distB = b.latitude && b.longitude 
+          ? calculateDistance(userLat, userLon, b.latitude, b.longitude)
+          : Infinity;
+        return distA - distB;
+      });
+    }
+
+    return halls;
+  }, [searchQuery, selectedCity, filters, dbHalls, sortByDistance, userLat, userLon]);
 
   const handleHallClick = (hall: any) => {
     setSelectedHall(hall);
@@ -161,6 +181,28 @@ export function HomeScreen() {
       {/* City Tabs */}
       <div className="px-4 py-4">
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {/* Sort by Distance Button */}
+          <button
+            onClick={() => {
+              if (!userLat && !geoLoading) {
+                requestLocation();
+              }
+              setSortByDistance(!sortByDistance);
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300 ${
+              sortByDistance
+                ? "bg-primary text-primary-foreground shadow-lg"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {geoLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Navigation className="w-4 h-4" />
+            )}
+            <span className="font-arabic text-sm">الأقرب</span>
+          </button>
+
           {cities.map((city) => (
             <button
               key={city.id}
@@ -201,6 +243,8 @@ export function HomeScreen() {
                 hall={hall} 
                 index={index} 
                 onClick={() => handleHallClick(hall)}
+                userLatitude={userLat}
+                userLongitude={userLon}
               />
             ))}
           </div>
