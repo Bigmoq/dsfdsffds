@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Lock, Crown } from "lucide-react";
+import { Lock, Crown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-// كلمة المرور - يمكنك تغييرها هنا
-const SITE_PASSWORD = "zafaf2025";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PasswordGateProps {
   children: React.ReactNode;
@@ -19,18 +17,40 @@ export function PasswordGate({ children }: PasswordGateProps) {
   });
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (password === SITE_PASSWORD) {
-      localStorage.setItem("site_unlocked", "true");
-      setIsUnlocked(true);
-      setError("");
-      // إعادة التوجيه للصفحة الرئيسية بعد فتح القفل
-      navigate("/", { replace: true });
-    } else {
-      setError("كلمة المرور غير صحيحة");
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "verify-site-access",
+        {
+          body: { password },
+        }
+      );
+
+      if (invokeError) {
+        console.error("Error verifying password:", invokeError);
+        setError("حدث خطأ أثناء التحقق");
+        return;
+      }
+
+      if (data?.success) {
+        localStorage.setItem("site_unlocked", "true");
+        setIsUnlocked(true);
+        setError("");
+        navigate("/", { replace: true });
+      } else {
+        setError("كلمة المرور غير صحيحة");
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      setError("حدث خطأ أثناء التحقق");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,8 +99,16 @@ export function PasswordGate({ children }: PasswordGateProps) {
           <Button
             type="submit"
             className="w-full py-6 gold-gradient text-white font-arabic"
+            disabled={isLoading}
           >
-            دخول
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                جاري التحقق...
+              </>
+            ) : (
+              "دخول"
+            )}
           </Button>
         </form>
       </motion.div>
