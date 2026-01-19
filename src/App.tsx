@@ -20,8 +20,8 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <PasswordGate>
-          <BrowserRouter>
+        <BrowserRouter>
+          <PasswordGate>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/welcome" element={<Welcome />} />
@@ -31,8 +31,8 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </PasswordGate>
+          </PasswordGate>
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   </HelmetProvider>
