@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Lock, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ export function PasswordGate({ children }: PasswordGateProps) {
       localStorage.setItem("site_unlocked", "true");
       setIsUnlocked(true);
       setError("");
+      // إعادة التوجيه للصفحة الرئيسية بعد فتح القفل
+      window.location.href = "/";
     } else {
       setError("كلمة المرور غير صحيحة");
     }
