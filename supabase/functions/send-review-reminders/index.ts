@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-function-secret",
 };
 
 serve(async (req) => {
@@ -12,6 +12,34 @@ serve(async (req) => {
   }
 
   try {
+    // Verify the secret token to prevent unauthorized access
+    const secretToken = req.headers.get("x-function-secret");
+    const expectedToken = Deno.env.get("FUNCTION_SECRET_TOKEN");
+
+    if (!expectedToken) {
+      console.error("FUNCTION_SECRET_TOKEN not configured");
+      return new Response(
+        JSON.stringify({ error: "Function not properly configured" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    if (secretToken !== expectedToken) {
+      console.error("Unauthorized access attempt - invalid or missing token");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("Authorized request - processing review reminders");
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);

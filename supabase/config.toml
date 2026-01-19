@@ -2,3 +2,6 @@ project_id = "ojryfssngnnjubqsrtzi"
 
 [functions.send-review-reminders]
 verify_jwt = false
+
+[functions.verify-site-access]
+verify_jwt = false
