@@ -15,7 +15,13 @@ serve(async (req) => {
     const { password } = await req.json();
     const validPassword = Deno.env.get("SITE_ACCESS_PASSWORD");
 
+    // Trim whitespace from both passwords for comparison
+    const trimmedInput = password?.trim() || "";
+    const trimmedValid = validPassword?.trim() || "";
+
     console.log("Site access verification attempt");
+    console.log("Input password length:", trimmedInput.length);
+    console.log("Valid password length:", trimmedValid.length);
 
     if (!validPassword) {
       console.error("SITE_ACCESS_PASSWORD not configured");
@@ -28,7 +34,7 @@ serve(async (req) => {
       );
     }
 
-    if (password === validPassword) {
+    if (trimmedInput === trimmedValid) {
       console.log("Site access granted");
       return new Response(
         JSON.stringify({ success: true }),
@@ -40,6 +46,8 @@ serve(async (req) => {
     }
 
     console.log("Site access denied - invalid password");
+    console.log("Expected:", trimmedValid.substring(0, 3) + "***");
+    console.log("Got:", trimmedInput.substring(0, 3) + "***");
     return new Response(
       JSON.stringify({ success: false, error: "Invalid password" }),
       {
