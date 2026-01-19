@@ -15,13 +15,14 @@ serve(async (req) => {
     const { password } = await req.json();
     const validPassword = Deno.env.get("SITE_ACCESS_PASSWORD");
 
-    // Trim whitespace from both passwords for comparison
-    const trimmedInput = password?.trim() || "";
-    const trimmedValid = validPassword?.trim() || "";
+    // Remove RTL/LTR marks and trim whitespace
+    // Unicode: \u200F (RTL mark), \u200E (LTR mark), \u202B (RTL embedding), \u202A (LTR embedding)
+    const cleanInput = (password || "").replace(/[\u200E\u200F\u202A\u202B\u202C\u202D\u202E\u2066\u2067\u2068\u2069]/g, '').trim();
+    const cleanValid = (validPassword || "").replace(/[\u200E\u200F\u202A\u202B\u202C\u202D\u202E\u2066\u2067\u2068\u2069]/g, '').trim();
 
     console.log("Site access verification attempt");
-    console.log("Input password length:", trimmedInput.length);
-    console.log("Valid password length:", trimmedValid.length);
+    console.log("Input password length:", cleanInput.length);
+    console.log("Valid password length:", cleanValid.length);
 
     if (!validPassword) {
       console.error("SITE_ACCESS_PASSWORD not configured");
@@ -34,7 +35,7 @@ serve(async (req) => {
       );
     }
 
-    if (trimmedInput === trimmedValid) {
+    if (cleanInput === cleanValid) {
       console.log("Site access granted");
       return new Response(
         JSON.stringify({ success: true }),
@@ -46,8 +47,8 @@ serve(async (req) => {
     }
 
     console.log("Site access denied - invalid password");
-    console.log("Expected:", trimmedValid.substring(0, 3) + "***");
-    console.log("Got:", trimmedInput.substring(0, 3) + "***");
+    console.log("Expected:", cleanValid.substring(0, 3) + "***");
+    console.log("Got:", cleanInput.substring(0, 3) + "***");
     return new Response(
       JSON.stringify({ success: false, error: "Invalid password" }),
       {
