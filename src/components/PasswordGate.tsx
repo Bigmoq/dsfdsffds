@@ -42,7 +42,7 @@ export function PasswordGate({ children }: PasswordGateProps) {
         localStorage.setItem("site_unlocked", "true");
         setIsUnlocked(true);
         setError("");
-        navigate("/", { replace: true });
+        navigate("/welcome", { replace: true });
       } else {
         setError("كلمة المرور غير صحيحة");
       }
