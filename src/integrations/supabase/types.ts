@@ -219,6 +219,13 @@ export type Database = {
             referencedRelation: "halls"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "favorites_hall_id_fkey"
+            columns: ["hall_id"]
+            isOneToOne: false
+            referencedRelation: "public_halls"
+            referencedColumns: ["id"]
+          },
         ]
       }
       hall_availability: {
@@ -252,6 +259,13 @@ export type Database = {
             columns: ["hall_id"]
             isOneToOne: false
             referencedRelation: "halls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hall_availability_hall_id_fkey"
+            columns: ["hall_id"]
+            isOneToOne: false
+            referencedRelation: "public_halls"
             referencedColumns: ["id"]
           },
         ]
@@ -308,6 +322,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "hall_bookings_hall_id_fkey"
+            columns: ["hall_id"]
+            isOneToOne: false
+            referencedRelation: "public_halls"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "hall_bookings_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -360,6 +381,13 @@ export type Database = {
             columns: ["hall_id"]
             isOneToOne: false
             referencedRelation: "halls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hall_reviews_hall_id_fkey"
+            columns: ["hall_id"]
+            isOneToOne: false
+            referencedRelation: "public_halls"
             referencedColumns: ["id"]
           },
         ]
@@ -864,7 +892,98 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_halls: {
+        Row: {
+          address: string | null
+          capacity_men: number | null
+          capacity_women: number | null
+          city: string | null
+          cover_image: string | null
+          created_at: string | null
+          description: string | null
+          features: string[] | null
+          gallery_images: string[] | null
+          id: string | null
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          min_capacity_men: number | null
+          min_capacity_women: number | null
+          name_ar: string | null
+          name_en: string | null
+          owner_id: string | null
+          price_per_chair_weekday: number | null
+          price_per_chair_weekend: number | null
+          price_weekday: number | null
+          price_weekend: number | null
+          pricing_type: string | null
+          updated_at: string | null
+          whatsapp_enabled: boolean | null
+        }
+        Insert: {
+          address?: string | null
+          capacity_men?: number | null
+          capacity_women?: number | null
+          city?: string | null
+          cover_image?: string | null
+          created_at?: string | null
+          description?: string | null
+          features?: string[] | null
+          gallery_images?: string[] | null
+          id?: string | null
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          min_capacity_men?: number | null
+          min_capacity_women?: number | null
+          name_ar?: string | null
+          name_en?: string | null
+          owner_id?: string | null
+          price_per_chair_weekday?: number | null
+          price_per_chair_weekend?: number | null
+          price_weekday?: number | null
+          price_weekend?: number | null
+          pricing_type?: string | null
+          updated_at?: string | null
+          whatsapp_enabled?: boolean | null
+        }
+        Update: {
+          address?: string | null
+          capacity_men?: number | null
+          capacity_women?: number | null
+          city?: string | null
+          cover_image?: string | null
+          created_at?: string | null
+          description?: string | null
+          features?: string[] | null
+          gallery_images?: string[] | null
+          id?: string | null
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          min_capacity_men?: number | null
+          min_capacity_women?: number | null
+          name_ar?: string | null
+          name_en?: string | null
+          owner_id?: string | null
+          price_per_chair_weekday?: number | null
+          price_per_chair_weekend?: number | null
+          price_weekday?: number | null
+          price_weekend?: number | null
+          pricing_type?: string | null
+          updated_at?: string | null
+          whatsapp_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "halls_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_hall_rating: {
