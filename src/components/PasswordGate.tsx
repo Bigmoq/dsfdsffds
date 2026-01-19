@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Lock, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ interface PasswordGateProps {
 }
 
 export function PasswordGate({ children }: PasswordGateProps) {
+  const navigate = useNavigate();
   const [isUnlocked, setIsUnlocked] = useState(() => {
     return localStorage.getItem("site_unlocked") === "true";
   });
@@ -26,7 +28,7 @@ export function PasswordGate({ children }: PasswordGateProps) {
       setIsUnlocked(true);
       setError("");
       // إعادة التوجيه للصفحة الرئيسية بعد فتح القفل
-      window.location.href = "/";
+      navigate("/", { replace: true });
     } else {
       setError("كلمة المرور غير صحيحة");
     }
