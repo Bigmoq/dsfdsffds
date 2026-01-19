@@ -8,21 +8,7 @@ import { Helmet } from "react-helmet-async";
 
 export default function Welcome() {
   const navigate = useNavigate();
-  const { isAuthenticated, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && isAuthenticated) {
-      navigate("/onboarding", { replace: true });
-    }
-  }, [isAuthenticated, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const { isAuthenticated } = useAuth();
 
   return (
     <>
