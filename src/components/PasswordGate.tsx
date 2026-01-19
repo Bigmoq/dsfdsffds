@@ -42,7 +42,8 @@ export function PasswordGate({ children }: PasswordGateProps) {
         localStorage.setItem("site_unlocked", "true");
         setIsUnlocked(true);
         setError("");
-        navigate("/welcome", { replace: true });
+        // Use window.location for reliable redirect
+        window.location.href = "/welcome";
       } else {
         setError("كلمة المرور غير صحيحة");
       }
