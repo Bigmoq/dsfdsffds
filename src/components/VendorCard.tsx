@@ -1,11 +1,13 @@
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Star, MessageCircle, MapPin, Heart, Package, CheckCircle } from "lucide-react";
 import { Vendor } from "@/data/weddingData";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useRef } from "react";
 import { useServiceFavorites } from "@/hooks/useServiceFavorites";
-
+import { ChatSheet } from "@/components/chat/ChatSheet";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 interface ExtendedVendor extends Vendor {
   city?: string;
   phone?: string;
@@ -24,17 +26,37 @@ interface VendorCardProps {
 export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { isFavorite, toggleFavorite } = useServiceFavorites();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [chatOpen, setChatOpen] = useState(false);
   const isLiked = isFavorite(vendor.id);
 
   const images = vendor.portfolio_images?.length 
     ? vendor.portfolio_images.slice(0, 5) 
     : [vendor.image];
 
-  const handleWhatsApp = (e: React.MouseEvent) => {
+  // Get the owner_id from the vendor (assuming it's passed in the vendor object)
+  const vendorOwnerId = (vendor as any).owner_id;
+
+  const handleChatClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const phone = vendor.phone || '966500000000';
-    const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن خدماتكم - ${vendor.nameAr}`);
-    window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${message}`, '_blank');
+    if (!user) {
+      toast({
+        title: "تسجيل الدخول مطلوب",
+        description: "يرجى تسجيل الدخول للتواصل مع مقدم الخدمة",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!vendorOwnerId) {
+      toast({
+        title: "خطأ",
+        description: "لا يمكن بدء المحادثة حالياً",
+        variant: "destructive",
+      });
+      return;
+    }
+    setChatOpen(true);
   };
 
   const handleLikeClick = (e: React.MouseEvent) => {
@@ -47,7 +69,6 @@ export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
       onClick();
     }
   };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -154,11 +175,11 @@ export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50">
           <Button 
             size="sm" 
-            onClick={handleWhatsApp}
-            className="bg-[#25D366] hover:bg-[#128C7E] text-white text-xs px-4 h-9"
+            onClick={handleChatClick}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs px-4 h-9"
           >
             <MessageCircle className="w-3.5 h-3.5 ml-1.5" />
-            تواصل
+            محادثة
           </Button>
           
           <div className="text-right">
@@ -175,6 +196,17 @@ export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
           </div>
         </div>
       </div>
+
+      {/* Chat Sheet */}
+      {vendorOwnerId && (
+        <ChatSheet
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          otherUserId={vendorOwnerId}
+          otherUserName={vendor.nameAr}
+          context={{ providerId: vendor.id }}
+        />
+      )}
     </motion.div>
   );
 }

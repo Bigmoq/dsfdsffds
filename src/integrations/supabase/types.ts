@@ -56,6 +56,48 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       complaints: {
         Row: {
           admin_response: string | null
@@ -100,6 +142,82 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          dress_id: string | null
+          hall_id: string | null
+          id: string
+          participant_1: string
+          participant_2: string
+          provider_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dress_id?: string | null
+          hall_id?: string | null
+          id?: string
+          participant_1: string
+          participant_2: string
+          provider_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dress_id?: string | null
+          hall_id?: string | null
+          id?: string
+          participant_1?: string
+          participant_2?: string
+          provider_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_dress_id_fkey"
+            columns: ["dress_id"]
+            isOneToOne: false
+            referencedRelation: "dresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_hall_id_fkey"
+            columns: ["hall_id"]
+            isOneToOne: false
+            referencedRelation: "halls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_hall_id_fkey"
+            columns: ["hall_id"]
+            isOneToOne: false
+            referencedRelation: "public_halls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_participant_1_fkey"
+            columns: ["participant_1"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_participant_2_fkey"
+            columns: ["participant_2"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dress_favorites: {
         Row: {

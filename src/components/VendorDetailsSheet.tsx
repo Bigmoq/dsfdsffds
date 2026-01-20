@@ -13,7 +13,9 @@ import { format, addDays, isSameDay, startOfToday } from "date-fns";
 import { ar } from "date-fns/locale";
 import { VendorReviews } from "./VendorReviews";
 import { ServiceBookingSheet } from "./ServiceBookingSheet";
-
+import { ChatSheet } from "@/components/chat/ChatSheet";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 interface ServicePackage {
   id: string;
   name_ar: string;
@@ -59,12 +61,17 @@ interface VendorDetailsSheetProps {
 }
 
 export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetailsSheetProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookingSheetOpen, setBookingSheetOpen] = useState(false);
   const [selectedBookingDate, setSelectedBookingDate] = useState<Date | undefined>();
+  const [chatOpen, setChatOpen] = useState(false);
+  const [vendorOwnerId, setVendorOwnerId] = useState<string | null>(null);
+  
   const images = vendor?.portfolio_images?.length 
     ? vendor.portfolio_images 
     : vendor?.image 
@@ -91,6 +98,17 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
       
       setPackages(packagesData || []);
 
+      // Fetch provider owner_id
+      const { data: providerData } = await supabase
+        .from('service_providers')
+        .select('owner_id')
+        .eq('id', vendor.id)
+        .single();
+      
+      if (providerData) {
+        setVendorOwnerId(providerData.owner_id);
+      }
+
       // Fetch availability for next 14 days
       const today = startOfToday();
       const { data: availabilityData } = await supabase
@@ -109,10 +127,24 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
     }
   };
 
-  const handleWhatsApp = () => {
-    const phone = vendor?.phone || '966500000000';
-    const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن خدماتكم - ${vendor?.nameAr}`);
-    window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${message}`, '_blank');
+  const handleChatClick = () => {
+    if (!user) {
+      toast({
+        title: "تسجيل الدخول مطلوب",
+        description: "يرجى تسجيل الدخول للتواصل مع مقدم الخدمة",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!vendorOwnerId) {
+      toast({
+        title: "خطأ",
+        description: "لا يمكن بدء المحادثة حالياً",
+        variant: "destructive",
+      });
+      return;
+    }
+    setChatOpen(true);
   };
 
   const handleCall = () => {
@@ -428,11 +460,11 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
                 اتصال
               </Button>
               <Button
-                className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white"
-                onClick={handleWhatsApp}
+                className="flex-1"
+                onClick={handleChatClick}
               >
                 <MessageCircle className="w-4 h-4 ml-2" />
-                واتساب
+                محادثة
               </Button>
             </div>
           </div>
@@ -453,6 +485,17 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
             }}
             packages={packages}
             initialDate={selectedBookingDate}
+          />
+        )}
+
+        {/* Chat Sheet */}
+        {vendorOwnerId && vendor && (
+          <ChatSheet
+            open={chatOpen}
+            onOpenChange={setChatOpen}
+            otherUserId={vendorOwnerId}
+            otherUserName={vendor.nameAr}
+            context={{ providerId: vendor.id }}
           />
         )}
       </SheetContent>
