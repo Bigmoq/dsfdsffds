@@ -18,7 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { LocationMap } from "./LocationMap";
 import { useGeolocation } from "@/hooks/useGeolocation";
-
+import { ChatSheet } from "./chat/ChatSheet";
 type AvailabilityStatus = 'available' | 'booked' | 'resale';
 
 // Support both old mock data and new database schema
@@ -84,6 +84,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
+  const [chatOpen, setChatOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -516,21 +517,46 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
         </div>
       )}
 
-      {/* WhatsApp Contact Button - At the very end */}
-      {normalizedHall.phone && normalizedHall.whatsappEnabled && (
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            const phone = normalizedHall.phone!.replace(/\D/g, '');
-            const message = encodeURIComponent(`مرحباً، أرغب في الاستفسار عن قاعة ${normalizedHall.nameAr}`);
-            window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-          }}
-          className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white gap-2"
-          size="lg"
-        >
-          <MessageCircle className="w-5 h-5" />
-          <span className="font-arabic">تواصل عبر واتساب</span>
-        </Button>
+      {/* Chat Button - At the very end */}
+      <Button
+        onClick={async (e) => {
+          e.stopPropagation();
+          if (!isDatabaseHall(hall)) {
+            toast({
+              title: "غير متاح",
+              description: "المحادثة غير متاحة لهذه القاعة",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            toast({
+              title: "يجب تسجيل الدخول",
+              description: "الرجاء تسجيل الدخول للتواصل مع صاحب القاعة",
+              variant: "destructive",
+            });
+            navigate('/auth');
+            return;
+          }
+          
+          setChatOpen(true);
+        }}
+        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+        size="lg"
+      >
+        <MessageCircle className="w-5 h-5" />
+        <span className="font-arabic">تواصل مع صاحب القاعة</span>
+      </Button>
+      
+      {/* Chat Sheet */}
+      {isDatabaseHall(hall) && (
+        <ChatSheet
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          hallId={hall.id}
+        />
       )}
     </motion.div>
   );

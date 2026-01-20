@@ -4,6 +4,10 @@ import { useState } from "react";
 import { Dress } from "@/data/weddingData";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { ChatSheet } from "./chat/ChatSheet";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface DressDetailsSheetProps {
   dress: Dress | null;
@@ -13,12 +17,37 @@ interface DressDetailsSheetProps {
 
 export function DressDetailsSheet({ dress, open, onClose }: DressDetailsSheetProps) {
   const [currentImage, setCurrentImage] = useState(0);
+  const [chatOpen, setChatOpen] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  
+  // Get dress ID - it may come from different sources
+  const dressId = (dress as any)?.id;
 
   if (!dress) return null;
 
-  const handleWhatsApp = () => {
-    const message = encodeURIComponent(`مرحباً، أنا مهتمة بالفستان: ${dress.title}`);
-    window.open(`https://wa.me/${dress.phone}?text=${message}`, "_blank");
+  const handleChat = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "يجب تسجيل الدخول",
+        description: "الرجاء تسجيل الدخول للتواصل مع البائعة",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+    
+    if (!dressId) {
+      toast({
+        title: "غير متاح",
+        description: "المحادثة غير متاحة لهذا الفستان",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setChatOpen(true);
   };
 
   const nextImage = () => {
@@ -121,16 +150,25 @@ export function DressDetailsSheet({ dress, open, onClose }: DressDetailsSheetPro
             </div>
           </div>
 
-          {/* Sticky WhatsApp Button */}
+          {/* Sticky Chat Button */}
           <div className="p-4 border-t border-border bg-background">
             <Button
-              onClick={handleWhatsApp}
-              className="w-full bg-green-500 hover:bg-green-600 text-white py-6 text-lg font-arabic rounded-xl"
+              onClick={handleChat}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg font-arabic rounded-xl"
             >
               <MessageCircle className="w-5 h-5 ml-2" />
-              تواصل عبر واتساب
+              تواصل مع البائعة
             </Button>
           </div>
+          
+          {/* Chat Sheet */}
+          {dressId && (
+            <ChatSheet
+              open={chatOpen}
+              onOpenChange={setChatOpen}
+              dressId={dressId}
+            />
+          )}
         </div>
       </SheetContent>
     </Sheet>
