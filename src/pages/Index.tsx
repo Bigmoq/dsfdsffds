@@ -21,6 +21,8 @@ const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(2); // Default to Home (center)
   const [initialSection, setInitialSection] = useState<string | null>(null);
+  const [showVendorDashboard, setShowVendorDashboard] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const { user, isVendor, isAdmin, loading, role } = useAuth();
   
   // Check URL params for deep linking
@@ -36,15 +38,20 @@ const Index = () => {
         setInitialSection(sectionParam);
       }
     } else if (tabParam === "vendor" && (isVendor || isAdmin)) {
-      // Will show vendor dashboard - pass section to it
+      // Show vendor dashboard with section
+      setShowVendorDashboard(true);
       if (sectionParam) {
         setInitialSection(sectionParam);
       }
     } else if (tabParam === "admin" && isAdmin) {
-      // Will show admin dashboard - pass section to it
+      // Show admin dashboard with section
+      setShowAdminDashboard(true);
       if (sectionParam) {
         setInitialSection(sectionParam);
       }
+    } else if (isVendor && !tabParam) {
+      // Default for vendors
+      setShowVendorDashboard(true);
     }
     
     // Clear URL params after processing
@@ -63,7 +70,7 @@ const Index = () => {
   }
 
   // If admin dashboard is requested via URL param and user is admin
-  if ((adminParam || tabParam === "admin") && isAdmin) {
+  if ((adminParam || showAdminDashboard) && isAdmin) {
     return (
       <>
         <Helmet>
@@ -76,7 +83,7 @@ const Index = () => {
   }
 
   // If user is a vendor, show the vendor dashboard
-  if (user && (isVendor || tabParam === "vendor")) {
+  if (user && (isVendor || showVendorDashboard)) {
     return (
       <>
         <Helmet>
