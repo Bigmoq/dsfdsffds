@@ -22,17 +22,6 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
   const [activeView, setActiveView] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
 
-  // Handle initial section from URL
-  useEffect(() => {
-    if (initialSection && !loading) {
-      if (initialSection === "bookings") {
-        setActiveView("hall_bookings");
-      } else if (initialSection === "service-bookings") {
-        setActiveView("service_bookings");
-      }
-    }
-  }, [initialSection, loading]);
-
   useEffect(() => {
     const checkWelcomeStatus = async () => {
       if (!user || !role) return;
@@ -49,25 +38,51 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
           
           if (error) {
             console.error('Error checking welcome status:', error);
-            setActiveView(role);
+            // Handle initial section from URL first
+            if (initialSection === "bookings") {
+              setActiveView("hall_bookings");
+            } else if (initialSection === "service-bookings") {
+              setActiveView("service_bookings");
+            } else {
+              setActiveView(role);
+            }
           } else if (!profile?.vendor_welcome_seen) {
             setShowWelcome(true);
           } else {
-            setActiveView(role);
+            // Handle initial section from URL
+            if (initialSection === "bookings") {
+              setActiveView("hall_bookings");
+            } else if (initialSection === "service-bookings") {
+              setActiveView("service_bookings");
+            } else {
+              setActiveView(role);
+            }
           }
         } catch (err) {
           console.error('Error:', err);
-          setActiveView(role);
+          if (initialSection === "bookings") {
+            setActiveView("hall_bookings");
+          } else if (initialSection === "service-bookings") {
+            setActiveView("service_bookings");
+          } else {
+            setActiveView(role);
+          }
         }
       } else if (role !== "user") {
-        setActiveView(role);
+        if (initialSection === "bookings") {
+          setActiveView("hall_bookings");
+        } else if (initialSection === "service-bookings") {
+          setActiveView("service_bookings");
+        } else {
+          setActiveView(role);
+        }
       }
       
       setLoading(false);
     };
 
     checkWelcomeStatus();
-  }, [user, role]);
+  }, [user, role, initialSection]);
 
   const handleWelcomeComplete = async () => {
     if (user) {
