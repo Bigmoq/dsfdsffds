@@ -26,7 +26,11 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Hall = Database["public"]["Tables"]["halls"]["Row"];
 
-export function HallManagement() {
+interface HallManagementProps {
+  initialTab?: "halls" | "calendar" | "bookings";
+}
+
+export function HallManagement({ initialTab = "halls" }: HallManagementProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [halls, setHalls] = useState<Hall[]>([]);
@@ -40,6 +44,7 @@ export function HallManagement() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [hallToDelete, setHallToDelete] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Get hall IDs for realtime notifications
   const hallIds = halls.map(h => h.id);
@@ -154,7 +159,7 @@ export function HallManagement() {
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="halls" className="w-full" dir="rtl">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "halls" | "calendar" | "bookings")} className="w-full" dir="rtl">
         <TabsList className="grid w-full grid-cols-3 mx-4 max-w-[calc(100%-2rem)]">
           <TabsTrigger value="halls" className="flex items-center gap-1.5 text-xs">
             <MapPin className="w-4 h-4" />
