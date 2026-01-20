@@ -8,6 +8,7 @@ export interface ChatMessage {
   conversation_id: string;
   sender_id: string;
   content: string;
+  images?: string[] | null;
   is_read: boolean;
   created_at: string;
   sender_profile?: {
@@ -176,8 +177,8 @@ export function useChat(options?: UseChatOptions) {
   }, [user]);
 
   // Send a message
-  const sendMessage = useCallback(async (content: string, conversationId?: string) => {
-    if (!user || !content.trim()) return false;
+  const sendMessage = useCallback(async (content: string, conversationId?: string, images?: string[]) => {
+    if (!user || (!content.trim() && (!images || images.length === 0))) return false;
 
     const targetConversationId = conversationId || currentConversation?.id;
     if (!targetConversationId) return false;
@@ -189,7 +190,8 @@ export function useChat(options?: UseChatOptions) {
         .insert({
           conversation_id: targetConversationId,
           sender_id: user.id,
-          content: content.trim(),
+          content: content.trim() || '',
+          images: images && images.length > 0 ? images : null,
         })
         .select(`
           *,
@@ -214,6 +216,37 @@ export function useChat(options?: UseChatOptions) {
       setSending(false);
     }
   }, [user, currentConversation, toast]);
+
+  // Upload image to storage
+  const uploadChatImage = useCallback(async (file: File) => {
+    if (!user) return null;
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('chat-images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل رفع الصورة",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('chat-images')
+      .getPublicUrl(data.path);
+
+    return publicUrl;
+  }, [user, toast]);
 
   // Real-time subscription
   useEffect(() => {
@@ -285,6 +318,7 @@ export function useChat(options?: UseChatOptions) {
     fetchConversations,
     fetchMessages,
     sendMessage,
+    uploadChatImage,
     getOrCreateConversation,
     setCurrentConversation,
     getUnreadCount,

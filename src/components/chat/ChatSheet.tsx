@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, MessageCircle, Loader2 } from "lucide-react";
+import { X, Send, MessageCircle, Loader2, Image as ImageIcon, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -40,12 +40,16 @@ export function ChatSheet({
     sending,
     fetchMessages,
     sendMessage,
+    uploadChatImage,
     getOrCreateConversation,
     currentConversation,
   } = useChat();
   
   const [messageText, setMessageText] = useState("");
   const [initializing, setInitializing] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [resolvedOtherUser, setResolvedOtherUser] = useState<{
     id: string;
     name: string;
@@ -53,6 +57,7 @@ export function ChatSheet({
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Resolve other user from hall/dress/provider if not provided directly
   useEffect(() => {
@@ -137,12 +142,58 @@ export function ChatSheet({
     }
   }, [open, loading, initializing]);
 
-  const handleSend = async () => {
-    if (!messageText.trim() || sending) return;
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles = files.filter(file => file.type.startsWith('image/'));
     
-    const text = messageText;
-    setMessageText("");
-    await sendMessage(text);
+    if (validFiles.length > 0) {
+      setSelectedImages(prev => [...prev, ...validFiles].slice(0, 4)); // Max 4 images
+      
+      // Create preview URLs
+      validFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreviewUrls(prev => [...prev, e.target?.result as string].slice(0, 4));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSend = async () => {
+    if ((!messageText.trim() && selectedImages.length === 0) || sending || uploading) return;
+    
+    setUploading(true);
+    
+    try {
+      // Upload images first
+      let uploadedUrls: string[] = [];
+      if (selectedImages.length > 0) {
+        for (const file of selectedImages) {
+          const url = await uploadChatImage(file);
+          if (url) uploadedUrls.push(url);
+        }
+      }
+      
+      const text = messageText;
+      setMessageText("");
+      setSelectedImages([]);
+      setImagePreviewUrls([]);
+      
+      await sendMessage(text, undefined, uploadedUrls.length > 0 ? uploadedUrls : undefined);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -255,17 +306,41 @@ export function ChatSheet({
                       ) : null}
                       
                       <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
-                        <div
-                          className={`px-4 py-2.5 rounded-2xl shadow-sm ${
-                            isOwn
-                              ? "bg-primary text-primary-foreground rounded-br-md"
-                              : "bg-muted text-foreground rounded-bl-md"
-                          }`}
-                        >
-                          <p className="text-sm font-arabic leading-relaxed whitespace-pre-wrap">
-                            {message.content}
-                          </p>
-                        </div>
+                        {/* Images */}
+                        {message.images && message.images.length > 0 && (
+                          <div className={`mb-2 grid gap-1 ${message.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                            {message.images.map((imageUrl, imgIndex) => (
+                              <a
+                                key={imgIndex}
+                                href={imageUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block"
+                              >
+                                <img
+                                  src={imageUrl}
+                                  alt={`صورة ${imgIndex + 1}`}
+                                  className="rounded-xl max-w-full h-auto max-h-48 object-cover border border-border/50"
+                                />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Text content */}
+                        {message.content && (
+                          <div
+                            className={`px-4 py-2.5 rounded-2xl shadow-sm ${
+                              isOwn
+                                ? "bg-primary text-primary-foreground rounded-br-md"
+                                : "bg-muted text-foreground rounded-bl-md"
+                            }`}
+                          >
+                            <p className="text-sm font-arabic leading-relaxed whitespace-pre-wrap">
+                              {message.content}
+                            </p>
+                          </div>
+                        )}
                         <div className={`flex items-center gap-1 mt-1 px-1 ${isOwn ? "justify-end" : "justify-start"}`}>
                           <span className="text-[10px] text-muted-foreground">
                             {formatMessageTime(message.created_at)}
@@ -286,9 +361,53 @@ export function ChatSheet({
           )}
         </ScrollArea>
 
+        {/* Image Previews */}
+        {imagePreviewUrls.length > 0 && (
+          <div className="px-4 py-2 border-t border-border bg-card/95">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {imagePreviewUrls.map((url, index) => (
+                <div key={index} className="relative flex-shrink-0">
+                  <img 
+                    src={url} 
+                    alt={`Preview ${index + 1}`}
+                    className="w-16 h-16 object-cover rounded-lg border border-border"
+                  />
+                  <button
+                    onClick={() => removeImage(index)}
+                    className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Input Area */}
         <div className="p-4 border-t border-border bg-card/95 backdrop-blur-sm">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleImageSelect}
+          />
+          
           <div className="flex items-center gap-2">
+            {/* Image upload button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending || uploading || loading || initializing || selectedImages.length >= 4}
+              className="w-10 h-10 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
+            >
+              <ImageIcon className="w-5 h-5" />
+            </Button>
+            
             <div className="flex-1 relative">
               <Input
                 ref={inputRef}
@@ -296,16 +415,16 @@ export function ChatSheet({
                 onChange={(e) => setMessageText(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="اكتب رسالتك..."
-                className="pr-4 pl-12 py-6 rounded-full bg-muted/50 border-0 font-arabic text-right focus-visible:ring-primary/50"
-                disabled={sending || loading || initializing}
+                className="pr-4 pl-4 py-6 rounded-full bg-muted/50 border-0 font-arabic text-right focus-visible:ring-primary/50"
+                disabled={sending || uploading || loading || initializing}
               />
             </div>
             <Button
               onClick={handleSend}
-              disabled={!messageText.trim() || sending || loading || initializing}
+              disabled={(!messageText.trim() && selectedImages.length === 0) || sending || uploading || loading || initializing}
               className="w-12 h-12 rounded-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all duration-200 hover:scale-105 disabled:opacity-50"
             >
-              {sending ? (
+              {(sending || uploading) ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <Send className="w-5 h-5 rotate-180" />
