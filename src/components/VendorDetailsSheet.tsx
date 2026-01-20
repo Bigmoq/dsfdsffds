@@ -495,7 +495,7 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
             onOpenChange={setChatOpen}
             otherUserId={vendorOwnerId}
             otherUserName={vendor.nameAr}
-            context={{ providerId: vendor.id }}
+            providerId={vendor.id}
           />
         )}
       </SheetContent>

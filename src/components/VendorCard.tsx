@@ -204,7 +204,7 @@ export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
           onOpenChange={setChatOpen}
           otherUserId={vendorOwnerId}
           otherUserName={vendor.nameAr}
-          context={{ providerId: vendor.id }}
+          providerId={vendor.id}
         />
       )}
     </motion.div>

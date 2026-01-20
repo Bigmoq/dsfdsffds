@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, ArrowRight, MessageCircle } from "lucide-react";
+import { X, Send, MessageCircle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -8,21 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useChat, ChatMessage } from "@/hooks/useChat";
+import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ChatSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  otherUserId: string;
-  otherUserName: string;
+  otherUserId?: string;
+  otherUserName?: string;
   otherUserAvatar?: string | null;
-  context?: {
-    providerId?: string;
-    hallId?: string;
-    dressId?: string;
-  };
+  providerId?: string;
+  hallId?: string;
+  dressId?: string;
 }
 
 export function ChatSheet({
@@ -31,7 +29,9 @@ export function ChatSheet({
   otherUserId,
   otherUserName,
   otherUserAvatar,
-  context,
+  providerId,
+  hallId,
+  dressId,
 }: ChatSheetProps) {
   const { user } = useAuth();
   const {
@@ -46,21 +46,84 @@ export function ChatSheet({
   
   const [messageText, setMessageText] = useState("");
   const [initializing, setInitializing] = useState(false);
+  const [resolvedOtherUser, setResolvedOtherUser] = useState<{
+    id: string;
+    name: string;
+    avatar: string | null;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Resolve other user from hall/dress/provider if not provided directly
+  useEffect(() => {
+    const resolveOtherUser = async () => {
+      if (otherUserId && otherUserName) {
+        setResolvedOtherUser({
+          id: otherUserId,
+          name: otherUserName,
+          avatar: otherUserAvatar || null,
+        });
+        return;
+      }
+
+      let ownerId: string | null = null;
+      
+      if (hallId) {
+        const { data } = await supabase
+          .from('halls')
+          .select('owner_id, name_ar')
+          .eq('id', hallId)
+          .single();
+        ownerId = data?.owner_id || null;
+      } else if (dressId) {
+        const { data } = await supabase
+          .from('dresses')
+          .select('seller_id, title')
+          .eq('id', dressId)
+          .single();
+        ownerId = data?.seller_id || null;
+      } else if (providerId) {
+        const { data } = await supabase
+          .from('service_providers')
+          .select('owner_id, name_ar')
+          .eq('id', providerId)
+          .single();
+        ownerId = data?.owner_id || null;
+      }
+
+      if (ownerId) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', ownerId)
+          .single();
+          
+        setResolvedOtherUser({
+          id: ownerId,
+          name: profile?.full_name || 'مستخدم',
+          avatar: profile?.avatar_url || null,
+        });
+      }
+    };
+
+    if (open) {
+      resolveOtherUser();
+    }
+  }, [open, otherUserId, otherUserName, otherUserAvatar, hallId, dressId, providerId]);
+
   // Initialize conversation when sheet opens
   useEffect(() => {
-    if (open && otherUserId && user) {
+    if (open && resolvedOtherUser?.id && user) {
       setInitializing(true);
-      getOrCreateConversation(otherUserId, context).then((conv) => {
+      const context = { providerId, hallId, dressId };
+      getOrCreateConversation(resolvedOtherUser.id, context).then((conv) => {
         if (conv) {
           fetchMessages(conv.id);
         }
         setInitializing(false);
       });
     }
-  }, [open, otherUserId, user, context, getOrCreateConversation, fetchMessages]);
+  }, [open, resolvedOtherUser?.id, user, providerId, hallId, dressId, getOrCreateConversation, fetchMessages]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -128,14 +191,14 @@ export function ChatSheet({
           
           <div className="flex items-center gap-3 flex-1 justify-center">
             <Avatar className="w-10 h-10 border-2 border-primary/20">
-              <AvatarImage src={otherUserAvatar || undefined} />
+              <AvatarImage src={resolvedOtherUser?.avatar || undefined} />
               <AvatarFallback className="bg-primary/10 text-primary font-arabic">
-                {getInitials(otherUserName)}
+                {getInitials(resolvedOtherUser?.name || 'مستخدم')}
               </AvatarFallback>
             </Avatar>
             <div className="text-center">
               <h3 className="font-arabic font-semibold text-foreground">
-                {otherUserName}
+                {resolvedOtherUser?.name || 'مستخدم'}
               </h3>
               <p className="text-xs text-muted-foreground">متصل الآن</p>
             </div>
@@ -158,7 +221,7 @@ export function ChatSheet({
               <div>
                 <h4 className="font-arabic font-semibold text-lg">ابدأ المحادثة</h4>
                 <p className="text-sm text-muted-foreground mt-1">
-                  أرسل رسالة للتواصل مع {otherUserName}
+                  أرسل رسالة للتواصل مع {resolvedOtherUser?.name || 'البائع'}
                 </p>
               </div>
             </div>
@@ -182,9 +245,9 @@ export function ChatSheet({
                     >
                       {!isOwn && showAvatar ? (
                         <Avatar className="w-7 h-7 mb-5">
-                          <AvatarImage src={otherUserAvatar || undefined} />
+                          <AvatarImage src={resolvedOtherUser?.avatar || undefined} />
                           <AvatarFallback className="text-xs bg-muted">
-                            {getInitials(otherUserName)}
+                            {getInitials(resolvedOtherUser?.name || 'م')}
                           </AvatarFallback>
                         </Avatar>
                       ) : !isOwn ? (

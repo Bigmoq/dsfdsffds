@@ -190,7 +190,9 @@ export function ConversationsList({ open, onOpenChange }: ConversationsListProps
           otherUserId={selectedConversation.otherUserId}
           otherUserName={selectedConversation.otherUserName}
           otherUserAvatar={selectedConversation.otherUserAvatar}
-          context={selectedConversation.context}
+          providerId={selectedConversation.context?.providerId}
+          hallId={selectedConversation.context?.hallId}
+          dressId={selectedConversation.context?.dressId}
         />
       )}
     </>
