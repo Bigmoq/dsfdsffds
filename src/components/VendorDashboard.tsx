@@ -112,7 +112,7 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
     return <VendorWelcome onComplete={handleWelcomeComplete} vendorType={role} />;
   }
 
-  if (activeView === "hall_owner") {
+  if (activeView === "hall_owner" || activeView === "hall_bookings") {
     return (
       <div>
         <button
@@ -122,7 +122,7 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
           <span className="font-arabic text-sm">العودة للوحة التحكم</span>
           <ArrowRight className="w-4 h-4" />
         </button>
-        <HallManagement />
+        <HallManagement initialTab={activeView === "hall_bookings" ? "bookings" : "halls"} />
       </div>
     );
   }
