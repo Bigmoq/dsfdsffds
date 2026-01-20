@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
 import { 
   Bell, X, CheckCircle, AlertCircle, Info, AlertTriangle, 
-  Check, Loader2, Trash2
+  Check, Loader2, Trash2, ChevronLeft
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,8 +35,9 @@ interface NotificationsSheetProps {
 }
 
 export function NotificationsSheet({ open: controlledOpen, onOpenChange, showTrigger = true }: NotificationsSheetProps) {
-  const { user } = useAuth();
+  const { user, isVendor, isAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [internalOpen, setInternalOpen] = useState(false);
   
   const isControlled = controlledOpen !== undefined;
@@ -43,6 +45,50 @@ export function NotificationsSheet({ open: controlledOpen, onOpenChange, showTri
   const setOpen = (value: boolean) => {
     if (onOpenChange) onOpenChange(value);
     if (!isControlled) setInternalOpen(value);
+  };
+
+  // Handle notification click - navigate to relevant location
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark as read first
+    if (!notification.is_read) {
+      markAsReadMutation.mutate(notification.id);
+    }
+    
+    // Navigate based on reference_type
+    if (notification.reference_type && notification.reference_id) {
+      setOpen(false); // Close the sheet
+      
+      switch (notification.reference_type) {
+        case 'hall_booking':
+          // If vendor/admin, go to vendor dashboard bookings
+          if (isVendor || isAdmin) {
+            navigate('/?tab=vendor&section=bookings');
+          } else {
+            // Regular user - go to my bookings
+            navigate('/?tab=profile&section=bookings');
+          }
+          break;
+        case 'service_booking':
+          if (isVendor || isAdmin) {
+            navigate('/?tab=vendor&section=service-bookings');
+          } else {
+            navigate('/?tab=profile&section=bookings');
+          }
+          break;
+        case 'vendor_application':
+          if (isAdmin) {
+            navigate('/?tab=admin&section=applications');
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  };
+
+  // Check if notification is clickable
+  const isClickable = (notification: Notification) => {
+    return notification.reference_type && notification.reference_id;
   };
 
   // Fetch notifications
@@ -234,15 +280,17 @@ export function NotificationsSheet({ open: controlledOpen, onOpenChange, showTri
                     transition={{ delay: index * 0.03 }}
                     className={cn(
                       "p-4 cursor-pointer transition-colors hover:bg-muted/50",
-                      getNotificationBg(notification.type, notification.is_read)
+                      getNotificationBg(notification.type, notification.is_read),
+                      isClickable(notification) && "active:scale-[0.99]"
                     )}
-                    onClick={() => {
-                      if (!notification.is_read) {
-                        markAsReadMutation.mutate(notification.id);
-                      }
-                    }}
+                    onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex gap-3">
+                      {isClickable(notification) && (
+                        <div className="flex-shrink-0 mt-0.5">
+                          <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      )}
                       <div className="flex-shrink-0 mt-0.5">
                         {getNotificationIcon(notification.type)}
                       </div>
@@ -263,12 +311,19 @@ export function NotificationsSheet({ open: controlledOpen, onOpenChange, showTri
                         <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                           {notification.message}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {formatDistanceToNow(new Date(notification.created_at), { 
-                            addSuffix: true, 
-                            locale: ar 
-                          })}
-                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(notification.created_at), { 
+                              addSuffix: true, 
+                              locale: ar 
+                            })}
+                          </p>
+                          {isClickable(notification) && (
+                            <Badge variant="outline" className="text-xs">
+                              اضغط للعرض
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </motion.div>
