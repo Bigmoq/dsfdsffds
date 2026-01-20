@@ -1,15 +1,13 @@
-import { useState, useMemo } from "react";
-import { Plus, Search, SlidersHorizontal, Sparkles, Tag, ArrowUpDown } from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
+import { Plus, Search, SlidersHorizontal, Sparkles, Tag, ArrowUpDown, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { DressCard } from "./DressCard";
 import { DressDetailsSheet } from "./DressDetailsSheet";
 import { SellDressSheet } from "./SellDressSheet";
 import { DressFilterSheet, DressFilters } from "./DressFilterSheet";
-import { mockDresses, Dress, saudiCities } from "@/data/weddingData";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { usePaginatedQuery, useInfiniteScroll, InfiniteScrollTrigger } from "@/hooks/usePaginatedQuery";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +18,8 @@ import {
 type ConditionTab = "all" | "new" | "used";
 type CategoryTab = "all" | "wedding" | "evening" | "maternity";
 type SortOption = "newest" | "oldest" | "price_low" | "price_high";
+
+const PAGE_SIZE = 20;
 
 const sortOptions: { id: SortOption; label: string }[] = [
   { id: "newest", label: "الأحدث" },
@@ -51,94 +51,90 @@ export function DressesScreen() {
     priceRange: [0, 10000]
   });
 
-  // Fetch dresses from database
-  const { data: dbDresses = [], isLoading } = useQuery({
-    queryKey: ['dresses'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('dresses')
-        .select('*')
-        .eq('is_active', true)
-        .eq('is_sold', false)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    },
+  // Build query filters
+  const queryFilters = useMemo(() => {
+    const f: Record<string, any> = { 
+      is_active: true, 
+      is_sold: false 
+    };
+    
+    if (selectedCondition !== "all") {
+      f.condition = selectedCondition;
+    }
+    
+    if (selectedCategory !== "all") {
+      f.category = selectedCategory;
+    }
+    
+    if (selectedCity !== "all") {
+      f.city = selectedCity;
+    }
+    
+    if (filters.city) {
+      f.city = filters.city;
+    }
+    
+    if (filters.size) {
+      f.size = filters.size;
+    }
+    
+    return f;
+  }, [selectedCondition, selectedCategory, selectedCity, filters.city, filters.size]);
+
+  // Determine sort order
+  const orderBy = useMemo(() => {
+    switch (sortBy) {
+      case "oldest":
+        return { column: 'created_at', ascending: true };
+      case "price_low":
+        return { column: 'price', ascending: true };
+      case "price_high":
+        return { column: 'price', ascending: false };
+      default:
+        return { column: 'created_at', ascending: false };
+    }
+  }, [sortBy]);
+
+  // Fetch dresses with pagination
+  const {
+    data: dbDresses,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    totalCount,
+  } = usePaginatedQuery<any>({
+    queryKey: ['dresses-paginated'],
+    tableName: 'dresses',
+    pageSize: PAGE_SIZE,
+    orderBy,
+    filters: queryFilters,
+    select: '*',
   });
 
-  // Combine mock and database dresses for now
-  const allDresses = useMemo(() => {
-    const dbDressesNormalized = dbDresses.map(d => ({
-      id: d.id,
-      title: d.title,
-      price: d.price,
-      size: d.size,
-      city: d.city,
-      images: d.images || [],
-      phone: '',
-      condition: d.condition || 'used',
-      category: (d as any).category || 'wedding',
-      description: d.description,
-      isFromDb: true,
-      created_at: d.created_at,
-    }));
-    
-    // Add condition and category to mock dresses
-    const mockDressesWithCondition = mockDresses.map((d, idx) => ({
-      ...d,
-      condition: Math.random() > 0.5 ? 'new' : 'used',
-      category: ['wedding', 'evening', 'maternity'][idx % 3],
-      isFromDb: false,
-    }));
-    
-    return [...dbDressesNormalized, ...mockDressesWithCondition];
-  }, [dbDresses]);
+  // Set up infinite scroll
+  const loadMoreRef = useInfiniteScroll(
+    useCallback(() => fetchNextPage(), [fetchNextPage]),
+    hasNextPage,
+    isFetchingNextPage
+  );
 
+  // Client-side filtering for search and price range
   const filteredDresses = useMemo(() => {
-    let result = allDresses.filter((dress) => {
+    return dbDresses.filter((dress) => {
       // Search filter
-      const matchesSearch = dress.title.includes(searchQuery) || dress.city.includes(searchQuery);
-      
-      // Condition filter
-      const matchesCondition = selectedCondition === "all" || dress.condition === selectedCondition;
-      
-      // Category filter
-      const matchesCategory = selectedCategory === "all" || (dress as any).category === selectedCategory;
-      
-      // City filter (from quick tabs)
-      const matchesQuickCity = selectedCity === "all" || dress.city === selectedCity;
-      
-      // City filter (from filter sheet)
-      const matchesFilterCity = !filters.city || dress.city === filters.city;
-      
-      // Size filter
-      const matchesSize = !filters.size || dress.size === filters.size;
+      if (searchQuery) {
+        const matchesSearch = dress.title.includes(searchQuery) || dress.city.includes(searchQuery);
+        if (!matchesSearch) return false;
+      }
       
       // Price filter
       const matchesPrice = dress.price >= filters.priceRange[0] && dress.price <= filters.priceRange[1];
+      if (!matchesPrice) return false;
       
-      return matchesSearch && matchesCondition && matchesCategory && matchesQuickCity && matchesFilterCity && matchesSize && matchesPrice;
+      return true;
     });
-
-    // Sort results
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case "newest":
-          return ((b as any).created_at || '').localeCompare((a as any).created_at || '');
-        case "oldest":
-          return ((a as any).created_at || '').localeCompare((b as any).created_at || '');
-        case "price_low":
-          return a.price - b.price;
-        case "price_high":
-          return b.price - a.price;
-        default:
-          return 0;
-      }
-    });
-
-    return result;
-  }, [allDresses, searchQuery, selectedCondition, selectedCategory, selectedCity, filters, sortBy]);
+  }, [dbDresses, searchQuery, filters.priceRange]);
 
   const activeFiltersCount = [
     filters.city,
@@ -272,7 +268,7 @@ export function DressesScreen() {
           </DropdownMenuContent>
         </DropdownMenu>
         <Badge variant="secondary" className="font-arabic">
-          {filteredDresses.length} فستان
+          {filteredDresses.length} {totalCount > filteredDresses.length ? `من ${totalCount}` : ''} فستان
         </Badge>
       </div>
 
@@ -280,31 +276,41 @@ export function DressesScreen() {
       <div className="px-4">
         {isLoading ? (
           <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
             <p className="text-muted-foreground font-arabic">جاري التحميل...</p>
           </div>
         ) : filteredDresses.length > 0 ? (
-          <motion.div 
-            className="grid grid-cols-2 gap-4"
-            layout
-          >
-            <AnimatePresence mode="popLayout">
-              {filteredDresses.map((dress) => (
-                <motion.div
-                  key={dress.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <DressCard
-                    dress={dress as any}
-                    onClick={() => handleDressClick(dress)}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <>
+            <motion.div 
+              className="grid grid-cols-2 gap-4"
+              layout
+            >
+              <AnimatePresence mode="popLayout">
+                {filteredDresses.map((dress) => (
+                  <motion.div
+                    key={dress.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <DressCard
+                      dress={dress as any}
+                      onClick={() => handleDressClick(dress)}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+            
+            {/* Infinite Scroll Trigger */}
+            <InfiniteScrollTrigger
+              loadMoreRef={loadMoreRef}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+            />
+          </>
         ) : (
           <div className="text-center py-12">
             <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">

@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Search, Sparkles, Users, SlidersHorizontal } from "lucide-react";
-import { womenCategories, menCategories, vendors, ServiceCategory } from "@/data/weddingData";
+import { ArrowRight, Search, Sparkles, Users, SlidersHorizontal, Loader2 } from "lucide-react";
+import { womenCategories, menCategories, ServiceCategory } from "@/data/weddingData";
 import { CategoryCard } from "./CategoryCard";
 import { VendorCard } from "./VendorCard";
 import { VendorDetailsSheet } from "./VendorDetailsSheet";
@@ -9,11 +9,12 @@ import { VendorFilterSheet, VendorFilters, defaultFilters } from "./VendorFilter
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { usePaginatedQuery, useInfiniteScroll, InfiniteScrollTrigger } from "@/hooks/usePaginatedQuery";
 import { format, startOfToday } from "date-fns";
 
 type Tab = "women" | "men";
+
+const PAGE_SIZE = 15;
 
 export function ServicesScreen() {
   const [activeTab, setActiveTab] = useState<Tab>("women");
@@ -23,28 +24,45 @@ export function ServicesScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<VendorFilters>(defaultFilters);
 
-  // Fetch service providers with packages and availability
-  const { data: dbProviders = [], isLoading } = useQuery({
-    queryKey: ['service-providers', selectedCategory?.id],
-    queryFn: async () => {
-      if (!selectedCategory) return [];
-      const today = format(startOfToday(), 'yyyy-MM-dd');
-      
-      const { data, error } = await supabase
-        .from('service_providers')
-        .select(`
-          *,
-          service_packages(*),
-          service_provider_availability(*)
-        `)
-        .eq('category_id', selectedCategory.id)
-        .eq('is_active', true);
-      
-      if (error) throw error;
-      return data || [];
-    },
+  // Build query filters
+  const queryFilters = useMemo(() => {
+    const f: Record<string, any> = { is_active: true };
+    
+    if (selectedCategory) {
+      f.category_id = selectedCategory.id;
+    }
+    
+    if (filters.city) {
+      f.city = filters.city;
+    }
+    
+    return f;
+  }, [selectedCategory, filters.city]);
+
+  // Fetch service providers with pagination
+  const {
+    data: dbProviders,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    totalCount,
+  } = usePaginatedQuery<any>({
+    queryKey: ['service-providers-paginated'],
+    tableName: 'service_providers',
+    pageSize: PAGE_SIZE,
+    orderBy: { column: 'rating', ascending: false },
+    filters: queryFilters,
+    select: '*',
     enabled: !!selectedCategory,
   });
+
+  // Set up infinite scroll
+  const loadMoreRef = useInfiniteScroll(
+    useCallback(() => fetchNextPage(), [fetchNextPage]),
+    hasNextPage,
+    isFetchingNextPage
+  );
 
   const categories = activeTab === "women" ? womenCategories : menCategories;
   
@@ -62,16 +80,7 @@ export function ServicesScreen() {
 
   // Process and filter vendors
   const allVendors = useMemo(() => {
-    const today = format(startOfToday(), 'yyyy-MM-dd');
-    
     const normalizedDbProviders = dbProviders.map(p => {
-      const todayAvailability = p.service_provider_availability?.find(
-        (a: any) => a.date === today
-      );
-      const minPackagePrice = p.service_packages?.length > 0
-        ? Math.min(...p.service_packages.map((pkg: any) => pkg.price))
-        : null;
-
       return {
         id: p.id,
         name: p.name_en || p.name_ar,
@@ -79,28 +88,23 @@ export function ServicesScreen() {
         categoryId: p.category_id,
         rating: Number(p.rating) || 0,
         reviews: p.reviews_count || 0,
-        price: minPackagePrice ? `${minPackagePrice} ر.س` : 'اتصل للسعر',
-        minPrice: minPackagePrice,
+        price: 'اتصل للسعر',
+        minPrice: null,
         image: p.portfolio_images?.[0] || '/placeholder.svg',
         portfolio_images: p.portfolio_images,
         description: p.description || '',
         descriptionAr: p.description || '',
         city: p.city,
         phone: p.phone,
-        packagesCount: p.service_packages?.length || 0,
-        isAvailableToday: todayAvailability?.status === 'available',
+        packagesCount: 0,
+        isAvailableToday: false,
         isFromDb: true,
       };
     });
 
-    // Apply filters
+    // Apply client-side filters
     let filtered = normalizedDbProviders.filter(v => {
-      if (filters.city && v.city !== filters.city) return false;
       if (filters.minRating > 0 && v.rating < filters.minRating) return false;
-      if (v.minPrice) {
-        if (v.minPrice < filters.priceRange[0] || v.minPrice > filters.priceRange[1]) return false;
-      }
-      if (filters.availableToday && !v.isAvailableToday) return false;
       if (searchQuery && !v.nameAr.includes(searchQuery) && !v.descriptionAr?.includes(searchQuery)) return false;
       return true;
     });
@@ -233,12 +237,13 @@ export function ServicesScreen() {
           >
             <div className="flex items-center justify-between mb-4">
               <Badge variant="secondary" className="font-arabic">
-                {allVendors.length} مقدم خدمة
+                {allVendors.length} {totalCount > allVendors.length ? `من ${totalCount}` : ''} مقدم خدمة
               </Badge>
             </div>
 
             {isLoading ? (
               <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
                 <p className="text-muted-foreground font-arabic">جاري التحميل...</p>
               </div>
             ) : allVendors.length > 0 ? (
@@ -251,6 +256,13 @@ export function ServicesScreen() {
                     onClick={() => setSelectedVendor(vendor)}
                   />
                 ))}
+                
+                {/* Infinite Scroll Trigger */}
+                <InfiniteScrollTrigger
+                  loadMoreRef={loadMoreRef}
+                  hasNextPage={hasNextPage}
+                  isFetchingNextPage={isFetchingNextPage}
+                />
               </div>
             ) : (
               <div className="text-center py-12">

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Search, SlidersHorizontal, MapPin, X, Navigation, Loader2 } from "lucide-react";
 import { cities } from "@/data/weddingData";
@@ -7,9 +7,10 @@ import { HallDetailsSheet } from "./HallDetailsSheet";
 import { HallFilterSheet, HallFilters, defaultFilters } from "./HallFilterSheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { usePaginatedQuery, useInfiniteScroll, InfiniteScrollTrigger } from "@/hooks/usePaginatedQuery";
 import { useGeolocation, calculateDistance } from "@/hooks/useGeolocation";
+
+const PAGE_SIZE = 15;
 
 export function HomeScreen() {
   const [selectedCity, setSelectedCity] = useState("all");
@@ -21,21 +22,47 @@ export function HomeScreen() {
   const [sortByDistance, setSortByDistance] = useState(false);
 
   // Get user's geolocation
-  const { latitude: userLat, longitude: userLon, loading: geoLoading, error: geoError, requestLocation } = useGeolocation();
+  const { latitude: userLat, longitude: userLon, loading: geoLoading, requestLocation } = useGeolocation();
 
-  // Fetch halls from database
-  const { data: dbHalls = [], isLoading } = useQuery({
-    queryKey: ['halls'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('halls')
-        .select('*')
-        .eq('is_active', true);
-      
-      if (error) throw error;
-      return data || [];
-    },
+  // Build filters for the query
+  const queryFilters = useMemo(() => {
+    const f: Record<string, any> = { is_active: true };
+    
+    // City filter
+    const cityFilter = selectedCity !== "all" ? selectedCity : filters.city;
+    if (cityFilter !== "all") {
+      const cityData = cities.find(c => c.id === cityFilter);
+      if (cityData) {
+        f.city = cityData.nameAr;
+      }
+    }
+    
+    return f;
+  }, [selectedCity, filters.city]);
+
+  // Fetch halls with pagination
+  const {
+    data: dbHalls,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    totalCount,
+  } = usePaginatedQuery<any>({
+    queryKey: ['halls-paginated'],
+    tableName: 'halls',
+    pageSize: PAGE_SIZE,
+    orderBy: { column: 'created_at', ascending: false },
+    filters: queryFilters,
+    select: '*',
   });
+
+  // Set up infinite scroll
+  const loadMoreRef = useInfiniteScroll(
+    useCallback(() => fetchNextPage(), [fetchNextPage]),
+    hasNextPage,
+    isFetchingNextPage
+  );
 
   // Count active filters (excluding defaults)
   const activeFilterCount = useMemo(() => {
@@ -47,7 +74,7 @@ export function HomeScreen() {
     return count;
   }, [filters]);
 
-  // Filter and sort halls based on search, filters, and distance
+  // Filter and sort halls based on search, filters, and distance (client-side for complex filters)
   const filteredHalls = useMemo(() => {
     let halls = dbHalls.filter((hall) => {
       // Search filter
@@ -59,14 +86,6 @@ export function HomeScreen() {
           hall.city.toLowerCase().includes(query) ||
           hall.city.includes(searchQuery);
         if (!matchesSearch) return false;
-      }
-
-      // City filter (from tabs or filter sheet)
-      const cityFilter = selectedCity !== "all" ? selectedCity : filters.city;
-      if (cityFilter !== "all") {
-        // Match city in Arabic
-        const cityData = cities.find(c => c.id === cityFilter);
-        if (cityData && hall.city !== cityData.nameAr) return false;
       }
 
       // Capacity filter
@@ -97,7 +116,7 @@ export function HomeScreen() {
     }
 
     return halls;
-  }, [searchQuery, selectedCity, filters, dbHalls, sortByDistance, userLat, userLon]);
+  }, [searchQuery, filters, dbHalls, sortByDistance, userLat, userLon]);
 
   const handleHallClick = (hall: any) => {
     setSelectedHall(hall);
@@ -224,7 +243,7 @@ export function HomeScreen() {
       <div className="px-4 space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground font-arabic">
-            {filteredHalls.length} قاعة متاحة
+            {filteredHalls.length} {totalCount > filteredHalls.length ? `من ${totalCount}` : ''} قاعة متاحة
           </span>
           <h2 className="font-display text-xl font-bold text-foreground">
             القاعات المميزة
@@ -233,6 +252,7 @@ export function HomeScreen() {
         
         {isLoading ? (
           <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
             <p className="text-muted-foreground font-arabic">جاري التحميل...</p>
           </div>
         ) : filteredHalls.length > 0 ? (
@@ -247,6 +267,13 @@ export function HomeScreen() {
                 userLongitude={userLon}
               />
             ))}
+            
+            {/* Infinite Scroll Trigger */}
+            <InfiniteScrollTrigger
+              loadMoreRef={loadMoreRef}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+            />
           </div>
         ) : (
           <div className="text-center py-12">
