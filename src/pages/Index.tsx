@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { BottomNav } from "@/components/BottomNav";
@@ -18,12 +18,40 @@ import { Loader2 } from "lucide-react";
 import { ChatFAB } from "@/components/chat/ChatFAB";
 
 const Index = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(2); // Default to Home (center)
+  const [initialSection, setInitialSection] = useState<string | null>(null);
   const { user, isVendor, isAdmin, loading, role } = useAuth();
   
-  // Check if admin param is present
+  // Check URL params for deep linking
   const adminParam = searchParams.get("admin") === "true";
+  const tabParam = searchParams.get("tab");
+  const sectionParam = searchParams.get("section");
+
+  // Handle URL-based navigation
+  useEffect(() => {
+    if (tabParam === "profile") {
+      setActiveTab(4);
+      if (sectionParam) {
+        setInitialSection(sectionParam);
+      }
+    } else if (tabParam === "vendor" && (isVendor || isAdmin)) {
+      // Will show vendor dashboard - pass section to it
+      if (sectionParam) {
+        setInitialSection(sectionParam);
+      }
+    } else if (tabParam === "admin" && isAdmin) {
+      // Will show admin dashboard - pass section to it
+      if (sectionParam) {
+        setInitialSection(sectionParam);
+      }
+    }
+    
+    // Clear URL params after processing
+    if (tabParam || sectionParam) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [tabParam, sectionParam, isVendor, isAdmin, setSearchParams]);
 
   // Show loading while checking auth OR when admin param is set but role not loaded yet
   if (loading || (adminParam && user && role === null)) {
@@ -35,20 +63,20 @@ const Index = () => {
   }
 
   // If admin dashboard is requested via URL param and user is admin
-  if (adminParam && isAdmin) {
+  if ((adminParam || tabParam === "admin") && isAdmin) {
     return (
       <>
         <Helmet>
           <title>لوحة الإدارة | زفاف</title>
           <meta name="description" content="لوحة إدارة التطبيق" />
         </Helmet>
-        <AdminDashboard onBack={() => window.location.href = "/"} />
+        <AdminDashboard onBack={() => window.location.href = "/"} initialSection={initialSection} />
       </>
     );
   }
 
   // If user is a vendor, show the vendor dashboard
-  if (user && isVendor) {
+  if (user && (isVendor || tabParam === "vendor")) {
     return (
       <>
         <Helmet>
@@ -75,7 +103,7 @@ const Index = () => {
             </p>
           </div>
           
-          <VendorDashboard />
+          <VendorDashboard initialSection={initialSection} />
           
           {/* Bottom Nav for vendors - only Profile tab active */}
           <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border/50 py-2 px-4 z-40">
