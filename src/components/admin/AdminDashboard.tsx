@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   LayoutDashboard, 
   Users, 
@@ -28,10 +28,22 @@ type AdminTab = "dashboard" | "users" | "halls" | "services" | "dresses" | "book
 
 interface AdminDashboardProps {
   onBack: () => void;
+  initialSection?: string | null;
 }
 
-export function AdminDashboard({ onBack }: AdminDashboardProps) {
+export function AdminDashboard({ onBack, initialSection }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+
+  // Handle initial section from URL
+  useEffect(() => {
+    if (initialSection) {
+      if (initialSection === "applications") {
+        setActiveTab("applications");
+      } else if (initialSection === "bookings") {
+        setActiveTab("bookings");
+      }
+    }
+  }, [initialSection]);
 
   const tabs = [
     { id: "dashboard" as AdminTab, label: "لوحة التحكم", icon: LayoutDashboard },

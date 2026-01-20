@@ -12,11 +12,26 @@ import { BookingCalendarView } from "./BookingCalendarView";
 import { VendorQuickStats } from "./VendorQuickStats";
 import { VendorWelcome } from "./VendorWelcome";
 
-export function VendorDashboard() {
+interface VendorDashboardProps {
+  initialSection?: string | null;
+}
+
+export function VendorDashboard({ initialSection }: VendorDashboardProps) {
   const { user, role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
+
+  // Handle initial section from URL
+  useEffect(() => {
+    if (initialSection && !loading) {
+      if (initialSection === "bookings") {
+        setActiveView("hall_bookings");
+      } else if (initialSection === "service-bookings") {
+        setActiveView("service_bookings");
+      }
+    }
+  }, [initialSection, loading]);
 
   useEffect(() => {
     const checkWelcomeStatus = async () => {
