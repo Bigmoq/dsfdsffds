@@ -15,6 +15,7 @@ import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { Helmet } from "react-helmet-async";
 import { Loader2 } from "lucide-react";
+import { ChatFAB } from "@/components/chat/ChatFAB";
 
 const Index = () => {
   const [searchParams] = useSearchParams();
@@ -128,6 +129,9 @@ const Index = () => {
             {screens[activeTab]}
           </motion.div>
         </AnimatePresence>
+        
+        {/* Chat FAB */}
+        <ChatFAB />
         
         <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
