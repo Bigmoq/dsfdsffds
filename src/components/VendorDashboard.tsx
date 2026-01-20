@@ -26,6 +26,19 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
     const checkWelcomeStatus = async () => {
       if (!user || !role) return;
       
+      // If we have an initialSection, navigate directly without checking welcome
+      if (initialSection) {
+        if (initialSection === "bookings") {
+          setActiveView("hall_bookings");
+        } else if (initialSection === "service-bookings") {
+          setActiveView("service_bookings");
+        } else {
+          setActiveView(role);
+        }
+        setLoading(false);
+        return;
+      }
+      
       // Check if this is a vendor role
       if (role === "hall_owner" || role === "service_provider" || role === "dress_seller") {
         try {
@@ -38,44 +51,18 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
           
           if (error) {
             console.error('Error checking welcome status:', error);
-            // Handle initial section from URL first
-            if (initialSection === "bookings") {
-              setActiveView("hall_bookings");
-            } else if (initialSection === "service-bookings") {
-              setActiveView("service_bookings");
-            } else {
-              setActiveView(role);
-            }
+            setActiveView(role);
           } else if (!profile?.vendor_welcome_seen) {
             setShowWelcome(true);
           } else {
-            // Handle initial section from URL
-            if (initialSection === "bookings") {
-              setActiveView("hall_bookings");
-            } else if (initialSection === "service-bookings") {
-              setActiveView("service_bookings");
-            } else {
-              setActiveView(role);
-            }
+            setActiveView(role);
           }
         } catch (err) {
           console.error('Error:', err);
-          if (initialSection === "bookings") {
-            setActiveView("hall_bookings");
-          } else if (initialSection === "service-bookings") {
-            setActiveView("service_bookings");
-          } else {
-            setActiveView(role);
-          }
-        }
-      } else if (role !== "user") {
-        if (initialSection === "bookings") {
-          setActiveView("hall_bookings");
-        } else if (initialSection === "service-bookings") {
-          setActiveView("service_bookings");
-        } else {
           setActiveView(role);
         }
+      } else if (role !== "user") {
+        setActiveView(role);
       }
       
       setLoading(false);
