@@ -12,7 +12,16 @@ import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes - data considered fresh
+      gcTime: 1000 * 60 * 30, // 30 minutes - cache retention
+      refetchOnWindowFocus: false, // Reduce unnecessary refetches
+      retry: 2, // Retry failed requests twice
+    },
+  },
+});
 
 const App = () => (
   <HelmetProvider>
