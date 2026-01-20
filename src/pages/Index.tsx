@@ -21,6 +21,7 @@ const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(2); // Default to Home (center)
   const [initialSection, setInitialSection] = useState<string | null>(null);
+  const [vendorKey, setVendorKey] = useState(0); // Key to force remount VendorDashboard
   const [showVendorDashboard, setShowVendorDashboard] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const { user, isVendor, isAdmin, loading, role } = useAuth();
@@ -32,6 +33,15 @@ const Index = () => {
 
   // Handle URL-based navigation
   useEffect(() => {
+    // Only process if we have URL params
+    if (!tabParam && !sectionParam) {
+      // Default behavior for vendors when no params
+      if (isVendor && !showVendorDashboard) {
+        setShowVendorDashboard(true);
+      }
+      return;
+    }
+
     if (tabParam === "profile") {
       setActiveTab(4);
       if (sectionParam) {
@@ -40,25 +50,24 @@ const Index = () => {
     } else if (tabParam === "vendor" && (isVendor || isAdmin)) {
       // Show vendor dashboard with section
       setShowVendorDashboard(true);
+      setShowAdminDashboard(false);
       if (sectionParam) {
         setInitialSection(sectionParam);
+        // Force remount of VendorDashboard to pick up new section
+        setVendorKey(prev => prev + 1);
       }
     } else if (tabParam === "admin" && isAdmin) {
       // Show admin dashboard with section
       setShowAdminDashboard(true);
+      setShowVendorDashboard(false);
       if (sectionParam) {
         setInitialSection(sectionParam);
       }
-    } else if (isVendor && !tabParam) {
-      // Default for vendors
-      setShowVendorDashboard(true);
     }
     
     // Clear URL params after processing
-    if (tabParam || sectionParam) {
-      setSearchParams({}, { replace: true });
-    }
-  }, [tabParam, sectionParam, isVendor, isAdmin, setSearchParams]);
+    setSearchParams({}, { replace: true });
+  }, [tabParam, sectionParam, isVendor, isAdmin, setSearchParams, showVendorDashboard]);
 
   // Show loading while checking auth OR when admin param is set but role not loaded yet
   if (loading || (adminParam && user && role === null)) {
@@ -110,7 +119,7 @@ const Index = () => {
             </p>
           </div>
           
-          <VendorDashboard initialSection={initialSection} />
+          <VendorDashboard key={vendorKey} initialSection={initialSection} />
           
           {/* Bottom Nav for vendors - only Profile tab active */}
           <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border/50 py-2 px-4 z-40">
