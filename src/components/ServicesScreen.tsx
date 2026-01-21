@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePaginatedQuery, useInfiniteScroll, InfiniteScrollTrigger } from "@/hooks/usePaginatedQuery";
 import { format, startOfToday } from "date-fns";
+import { VendorCardSkeleton } from "@/components/skeletons";
 
 type Tab = "women" | "men";
 
@@ -242,9 +243,10 @@ export function ServicesScreen() {
             </div>
 
             {isLoading ? (
-              <div className="text-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
-                <p className="text-muted-foreground font-arabic">جاري التحميل...</p>
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <VendorCardSkeleton key={i} />
+                ))}
               </div>
             ) : allVendors.length > 0 ? (
               <div className="space-y-4">

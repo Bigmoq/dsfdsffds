@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePaginatedQuery, useInfiniteScroll, InfiniteScrollTrigger } from "@/hooks/usePaginatedQuery";
 import { useGeolocation, calculateDistance } from "@/hooks/useGeolocation";
+import { HallCardSkeleton } from "@/components/skeletons";
 
 const PAGE_SIZE = 15;
 
@@ -251,9 +252,10 @@ export function HomeScreen() {
         </div>
         
         {isLoading ? (
-          <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
-            <p className="text-muted-foreground font-arabic">جاري التحميل...</p>
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <HallCardSkeleton key={i} />
+            ))}
           </div>
         ) : filteredHalls.length > 0 ? (
           <div className="space-y-4">

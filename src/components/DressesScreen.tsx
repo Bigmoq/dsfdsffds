@@ -8,6 +8,7 @@ import { SellDressSheet } from "./SellDressSheet";
 import { DressFilterSheet, DressFilters } from "./DressFilterSheet";
 import { Badge } from "@/components/ui/badge";
 import { usePaginatedQuery, useInfiniteScroll, InfiniteScrollTrigger } from "@/hooks/usePaginatedQuery";
+import { DressCardSkeleton } from "@/components/skeletons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -275,9 +276,10 @@ export function DressesScreen() {
       {/* Dresses Grid */}
       <div className="px-4">
         {isLoading ? (
-          <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
-            <p className="text-muted-foreground font-arabic">جاري التحميل...</p>
+          <div className="grid grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <DressCardSkeleton key={i} />
+            ))}
           </div>
         ) : filteredDresses.length > 0 ? (
           <>
