@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
+import Privacy from "./pages/Privacy";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/privacy" element={<Privacy />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
