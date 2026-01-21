@@ -10,7 +10,8 @@ import {
   Megaphone,
   FileCheck,
   ArrowRight,
-  Bell
+  Bell,
+  BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminStats } from "./AdminStats";
@@ -23,8 +24,9 @@ import { AdminComplaints } from "./AdminComplaints";
 import { AdminAds } from "./AdminAds";
 import { AdminApplications } from "./AdminApplications";
 import { AdminNotifications } from "./AdminNotifications";
+import { AdminAnalytics } from "./AdminAnalytics";
 
-type AdminTab = "dashboard" | "users" | "halls" | "services" | "dresses" | "bookings" | "complaints" | "ads" | "applications" | "notifications";
+type AdminTab = "dashboard" | "analytics" | "users" | "halls" | "services" | "dresses" | "bookings" | "complaints" | "ads" | "applications" | "notifications";
 
 interface AdminDashboardProps {
   onBack: () => void;
@@ -47,6 +49,7 @@ export function AdminDashboard({ onBack, initialSection }: AdminDashboardProps) 
 
   const tabs = [
     { id: "dashboard" as AdminTab, label: "لوحة التحكم", icon: LayoutDashboard },
+    { id: "analytics" as AdminTab, label: "التحليلات", icon: BarChart3 },
     { id: "users" as AdminTab, label: "المستخدمين", icon: Users },
     { id: "halls" as AdminTab, label: "القاعات", icon: Building2 },
     { id: "services" as AdminTab, label: "الخدمات", icon: Package },
@@ -61,6 +64,7 @@ export function AdminDashboard({ onBack, initialSection }: AdminDashboardProps) 
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard": return <AdminStats />;
+      case "analytics": return <AdminAnalytics />;
       case "users": return <AdminUsers />;
       case "halls": return <AdminHalls />;
       case "services": return <AdminServices />;
