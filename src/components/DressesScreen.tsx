@@ -9,6 +9,8 @@ import { DressFilterSheet, DressFilters } from "./DressFilterSheet";
 import { Badge } from "@/components/ui/badge";
 import { usePaginatedQuery, useInfiniteScroll, InfiniteScrollTrigger } from "@/hooks/usePaginatedQuery";
 import { DressCardSkeleton } from "@/components/skeletons";
+import { PullToRefresh } from "./PullToRefresh";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -156,8 +158,15 @@ export function DressesScreen() {
 
   const quickCities = ["all", "الرياض", "جدة", "مكة المكرمة", "الدمام"];
 
+  const queryClient = useQueryClient();
+  
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['dresses-paginated'] });
+  }, [queryClient]);
+
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <PullToRefresh onRefresh={handleRefresh} disabled={isLoading}>
+      <div className="min-h-screen bg-background pb-32">
       {/* Header */}
       <div className="bg-gradient-to-b from-pink-500/10 via-primary/5 to-background pt-12 pb-6 px-4">
         <motion.div
@@ -360,6 +369,7 @@ export function DressesScreen() {
         filters={filters}
         onApplyFilters={setFilters}
       />
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }

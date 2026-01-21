@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { usePaginatedQuery, useInfiniteScroll, InfiniteScrollTrigger } from "@/hooks/usePaginatedQuery";
 import { format, startOfToday } from "date-fns";
 import { VendorCardSkeleton } from "@/components/skeletons";
+import { PullToRefresh } from "./PullToRefresh";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Tab = "women" | "men";
 
@@ -144,8 +146,15 @@ export function ServicesScreen() {
     { id: "men" as Tab, label: "خدمات الرجال", icon: Users, emoji: "👨" },
   ];
 
+  const queryClient = useQueryClient();
+  
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['service-providers-paginated'] });
+  }, [queryClient]);
+
   return (
-    <div className="min-h-screen pb-24 bg-background">
+    <PullToRefresh onRefresh={handleRefresh} disabled={isLoading}>
+      <div className="min-h-screen pb-24 bg-background">
       {/* Header */}
       <div className="bg-gradient-to-b from-secondary/80 via-secondary/40 to-background pt-12 pb-6 px-4">
         <motion.div
@@ -342,6 +351,7 @@ export function ServicesScreen() {
         onFiltersChange={setFilters}
         availableCities={availableCities}
       />
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }

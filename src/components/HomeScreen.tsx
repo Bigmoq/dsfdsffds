@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { usePaginatedQuery, useInfiniteScroll, InfiniteScrollTrigger } from "@/hooks/usePaginatedQuery";
 import { useGeolocation, calculateDistance } from "@/hooks/useGeolocation";
 import { HallCardSkeleton } from "@/components/skeletons";
+import { PullToRefresh } from "./PullToRefresh";
+import { useQueryClient } from "@tanstack/react-query";
 
 const PAGE_SIZE = 15;
 
@@ -24,6 +26,9 @@ export function HomeScreen() {
 
   // Get user's geolocation
   const { latitude: userLat, longitude: userLon, loading: geoLoading, requestLocation } = useGeolocation();
+  
+  // Query client for refresh
+  const queryClient = useQueryClient();
 
   // Build filters for the query
   const queryFilters = useMemo(() => {
@@ -134,10 +139,15 @@ export function HomeScreen() {
     setSearchQuery("");
   };
 
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['halls-paginated'] });
+  }, [queryClient]);
+
   return (
-    <div className="min-h-screen pb-24">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden">
+    <PullToRefresh onRefresh={handleRefresh} disabled={isLoading}>
+      <div className="min-h-screen pb-24">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden">
         <div className="absolute inset-0 gold-gradient opacity-90" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6bTAtMTBjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
         
@@ -317,6 +327,7 @@ export function HomeScreen() {
           setSelectedCity(newFilters.city);
         }}
       />
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }
