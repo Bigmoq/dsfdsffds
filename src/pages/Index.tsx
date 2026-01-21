@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, type Transition } from "framer-motion";
 import { BottomNav } from "@/components/BottomNav";
 import { HomeScreen } from "@/components/HomeScreen";
 import { ServicesScreen } from "@/components/ServicesScreen";
@@ -17,6 +17,32 @@ import { Helmet } from "react-helmet-async";
 import { Loader2 } from "lucide-react";
 import { ChatFAB } from "@/components/chat/ChatFAB";
 
+// Page transition variants
+const pageVariants = {
+  initial: (dir: number) => ({
+    opacity: 0,
+    x: dir * 60,
+    scale: 0.98,
+  }),
+  animate: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+  },
+  exit: (dir: number) => ({
+    opacity: 0,
+    x: dir * -60,
+    scale: 0.98,
+  }),
+};
+
+const pageTransition: Transition = {
+  type: "spring",
+  stiffness: 300,
+  damping: 30,
+  mass: 0.8,
+};
+
 const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(2); // Default to Home (center)
@@ -24,6 +50,7 @@ const Index = () => {
   const [vendorKey, setVendorKey] = useState(0); // Key to force remount VendorDashboard
   const [showVendorDashboard, setShowVendorDashboard] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const prevTabRef = useRef(2);
   const { user, isVendor, isAdmin, loading, role } = useAuth();
   
   // Check URL params for deep linking
@@ -68,6 +95,15 @@ const Index = () => {
     // Clear URL params after processing
     setSearchParams({}, { replace: true });
   }, [tabParam, sectionParam, isVendor, isAdmin, setSearchParams, showVendorDashboard]);
+
+  // Track tab changes for directional animations
+  const handleTabChange = (newTab: number) => {
+    prevTabRef.current = activeTab;
+    setActiveTab(newTab);
+  };
+
+  // Determine animation direction based on tab positions (RTL layout)
+  const direction = activeTab > prevTabRef.current ? -1 : 1;
 
   // Show loading while checking auth OR when admin param is set but role not loaded yet
   if (loading || (adminParam && user && role === null)) {
@@ -162,13 +198,16 @@ const Index = () => {
           </div>
         )}
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.3 }}
+            custom={direction}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+            className="will-change-transform"
           >
             {screens[activeTab]}
           </motion.div>
@@ -177,7 +216,7 @@ const Index = () => {
         {/* Chat FAB */}
         <ChatFAB />
         
-        <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+        <BottomNav activeTab={activeTab} setActiveTab={handleTabChange} />
       </div>
     </>
   );
