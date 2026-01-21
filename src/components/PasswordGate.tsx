@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Lock, Crown, Loader2 } from "lucide-react";
@@ -10,7 +10,7 @@ interface PasswordGateProps {
   children: React.ReactNode;
 }
 
-export function PasswordGate({ children }: PasswordGateProps) {
+export const PasswordGate = forwardRef<HTMLDivElement, PasswordGateProps>(({ children }, ref) => {
   const navigate = useNavigate();
   const [isUnlocked, setIsUnlocked] = useState(() => {
     return localStorage.getItem("site_unlocked") === "true";
@@ -60,7 +60,7 @@ export function PasswordGate({ children }: PasswordGateProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6" dir="rtl">
+    <div ref={ref} className="min-h-screen bg-background flex items-center justify-center p-6" dir="rtl">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -115,4 +115,6 @@ export function PasswordGate({ children }: PasswordGateProps) {
       </motion.div>
     </div>
   );
-}
+});
+
+PasswordGate.displayName = "PasswordGate";
