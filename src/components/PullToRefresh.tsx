@@ -11,9 +11,22 @@ interface PullToRefreshProps {
 const PULL_THRESHOLD = 80;
 const MAX_PULL = 120;
 
+// Haptic feedback utility
+const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'medium') => {
+  if ('vibrate' in navigator) {
+    const patterns = {
+      light: 10,
+      medium: 25,
+      heavy: 50,
+    };
+    navigator.vibrate(patterns[type]);
+  }
+};
+
 export function PullToRefresh({ children, onRefresh, disabled = false }: PullToRefreshProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
+  const [hasTriggeredHaptic, setHasTriggeredHaptic] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const currentY = useRef(0);
@@ -33,6 +46,7 @@ export function PullToRefresh({ children, onRefresh, disabled = false }: PullToR
     if (container.scrollTop <= 0) {
       startY.current = e.touches[0].clientY;
       setIsPulling(true);
+      setHasTriggeredHaptic(false);
     }
   }, [disabled, isRefreshing]);
 
@@ -42,6 +56,7 @@ export function PullToRefresh({ children, onRefresh, disabled = false }: PullToR
     const container = containerRef.current;
     if (!container || container.scrollTop > 0) {
       setIsPulling(false);
+      setHasTriggeredHaptic(false);
       pullDistance.set(0);
       return;
     }
@@ -55,19 +70,30 @@ export function PullToRefresh({ children, onRefresh, disabled = false }: PullToR
     
     pullDistance.set(adjustedDelta);
     
+    // Trigger haptic when crossing threshold
+    if (adjustedDelta >= PULL_THRESHOLD && !hasTriggeredHaptic) {
+      triggerHaptic('light');
+      setHasTriggeredHaptic(true);
+    } else if (adjustedDelta < PULL_THRESHOLD && hasTriggeredHaptic) {
+      setHasTriggeredHaptic(false);
+    }
+    
     // Prevent default scroll when pulling
     if (delta > 0) {
       e.preventDefault();
     }
-  }, [isPulling, disabled, isRefreshing, pullDistance]);
+  }, [isPulling, disabled, isRefreshing, pullDistance, hasTriggeredHaptic]);
 
   const handleTouchEnd = useCallback(async () => {
     if (!isPulling || disabled) return;
     
     setIsPulling(false);
+    setHasTriggeredHaptic(false);
     const distance = pullDistance.get();
     
     if (distance >= PULL_THRESHOLD && !isRefreshing) {
+      // Trigger stronger haptic on refresh
+      triggerHaptic('medium');
       setIsRefreshing(true);
       
       // Animate to loading position
