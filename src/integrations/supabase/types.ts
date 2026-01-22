@@ -230,6 +230,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "conversations_dress_id_fkey"
+            columns: ["dress_id"]
+            isOneToOne: false
+            referencedRelation: "public_dresses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "conversations_hall_id_fkey"
             columns: ["hall_id"]
             isOneToOne: false
@@ -255,6 +262,13 @@ export type Database = {
             columns: ["participant_2"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "public_service_providers"
             referencedColumns: ["id"]
           },
           {
@@ -291,6 +305,13 @@ export type Database = {
             columns: ["dress_id"]
             isOneToOne: false
             referencedRelation: "dresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dress_favorites_dress_id_fkey"
+            columns: ["dress_id"]
+            isOneToOne: false
+            referencedRelation: "public_dresses"
             referencedColumns: ["id"]
           },
         ]
@@ -773,6 +794,13 @@ export type Database = {
             foreignKeyName: "service_bookings_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
+            referencedRelation: "public_service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_bookings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
             referencedRelation: "service_providers"
             referencedColumns: ["id"]
           },
@@ -798,6 +826,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "service_favorites_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "public_service_providers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_favorites_provider_id_fkey"
             columns: ["provider_id"]
@@ -840,6 +875,13 @@ export type Database = {
             foreignKeyName: "service_packages_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
+            referencedRelation: "public_service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_packages_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
             referencedRelation: "service_providers"
             referencedColumns: ["id"]
           },
@@ -871,6 +913,13 @@ export type Database = {
           status?: Database["public"]["Enums"]["service_availability_status"]
         }
         Relationships: [
+          {
+            foreignKeyName: "service_provider_availability_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "public_service_providers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_provider_availability_provider_id_fkey"
             columns: ["provider_id"]
@@ -909,6 +958,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "service_provider_reviews_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "public_service_providers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_provider_reviews_provider_id_fkey"
             columns: ["provider_id"]
@@ -1057,6 +1113,68 @@ export type Database = {
       }
     }
     Views: {
+      public_dresses: {
+        Row: {
+          category: string | null
+          city: string | null
+          condition: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          images: string[] | null
+          is_active: boolean | null
+          is_sold: boolean | null
+          price: number | null
+          seller_id: string | null
+          size: string | null
+          title: string | null
+          updated_at: string | null
+          whatsapp_enabled: boolean | null
+        }
+        Insert: {
+          category?: string | null
+          city?: string | null
+          condition?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          images?: string[] | null
+          is_active?: boolean | null
+          is_sold?: boolean | null
+          price?: number | null
+          seller_id?: string | null
+          size?: string | null
+          title?: string | null
+          updated_at?: string | null
+          whatsapp_enabled?: boolean | null
+        }
+        Update: {
+          category?: string | null
+          city?: string | null
+          condition?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          images?: string[] | null
+          is_active?: boolean | null
+          is_sold?: boolean | null
+          price?: number | null
+          seller_id?: string | null
+          size?: string | null
+          title?: string | null
+          updated_at?: string | null
+          whatsapp_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dresses_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_halls: {
         Row: {
           address: string | null
@@ -1142,6 +1260,68 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "halls_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_service_providers: {
+        Row: {
+          category_id: string | null
+          city: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_active: boolean | null
+          name_ar: string | null
+          name_en: string | null
+          owner_id: string | null
+          portfolio_images: string[] | null
+          rating: number | null
+          reviews_count: number | null
+          updated_at: string | null
+          whatsapp_enabled: boolean | null
+          work_days: string[] | null
+        }
+        Insert: {
+          category_id?: string | null
+          city?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name_ar?: string | null
+          name_en?: string | null
+          owner_id?: string | null
+          portfolio_images?: string[] | null
+          rating?: number | null
+          reviews_count?: number | null
+          updated_at?: string | null
+          whatsapp_enabled?: boolean | null
+          work_days?: string[] | null
+        }
+        Update: {
+          category_id?: string | null
+          city?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name_ar?: string | null
+          name_en?: string | null
+          owner_id?: string | null
+          portfolio_images?: string[] | null
+          rating?: number | null
+          reviews_count?: number | null
+          updated_at?: string | null
+          whatsapp_enabled?: boolean | null
+          work_days?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_providers_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
