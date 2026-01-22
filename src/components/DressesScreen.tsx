@@ -55,11 +55,9 @@ export function DressesScreen() {
   });
 
   // Build query filters
+  // Note: Using public_dresses view which already filters is_active=true AND is_sold=false
   const queryFilters = useMemo(() => {
-    const f: Record<string, any> = { 
-      is_active: true, 
-      is_sold: false 
-    };
+    const f: Record<string, any> = {};
     
     if (selectedCondition !== "all") {
       f.condition = selectedCondition;
@@ -108,7 +106,7 @@ export function DressesScreen() {
     totalCount,
   } = usePaginatedQuery<any>({
     queryKey: ['dresses-paginated'],
-    tableName: 'dresses',
+    tableName: 'public_dresses', // Secure view that excludes sold/inactive dresses
     pageSize: PAGE_SIZE,
     orderBy,
     filters: queryFilters,

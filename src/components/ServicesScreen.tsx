@@ -28,8 +28,9 @@ export function ServicesScreen() {
   const [filters, setFilters] = useState<VendorFilters>(defaultFilters);
 
   // Build query filters
+  // Note: Using public_service_providers view which already filters is_active=true and excludes phone
   const queryFilters = useMemo(() => {
-    const f: Record<string, any> = { is_active: true };
+    const f: Record<string, any> = {};
     
     if (selectedCategory) {
       f.category_id = selectedCategory.id;
@@ -52,7 +53,7 @@ export function ServicesScreen() {
     totalCount,
   } = usePaginatedQuery<any>({
     queryKey: ['service-providers-paginated'],
-    tableName: 'service_providers',
+    tableName: 'public_service_providers', // Secure view that excludes sensitive data (phone)
     pageSize: PAGE_SIZE,
     orderBy: { column: 'rating', ascending: false },
     filters: queryFilters,
