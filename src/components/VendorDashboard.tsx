@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Building2, ShoppingBag, Package, Plus, ArrowRight, Loader2, BarChart3, CalendarCheck, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { HallManagement } from "./HallManagement";
 import { ServiceProviderManagement } from "./ServiceProviderManagement";
 import { DressSellerManagement } from "./DressSellerManagement";
@@ -22,9 +23,30 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
   const [activeView, setActiveView] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
 
+  // Check what the user actually owns (halls, services, dresses)
+  const { data: ownership, isLoading: ownershipLoading } = useQuery({
+    queryKey: ['vendor-ownership', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return { hasHalls: false, hasServices: false, hasDresses: false };
+      
+      const [hallsResult, servicesResult, dressesResult] = await Promise.all([
+        supabase.from('halls').select('id').eq('owner_id', user.id).limit(1),
+        supabase.from('service_providers').select('id').eq('owner_id', user.id).limit(1),
+        supabase.from('dresses').select('id').eq('seller_id', user.id).limit(1),
+      ]);
+      
+      return {
+        hasHalls: (hallsResult.data?.length ?? 0) > 0,
+        hasServices: (servicesResult.data?.length ?? 0) > 0,
+        hasDresses: (dressesResult.data?.length ?? 0) > 0,
+      };
+    },
+    enabled: !!user?.id,
+  });
+
   useEffect(() => {
     const checkWelcomeStatus = async () => {
-      if (!user || !role) return;
+      if (!user || !role || ownershipLoading) return;
       
       // If we have an initialSection, navigate directly without checking welcome
       if (initialSection) {
@@ -51,25 +73,25 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
           
           if (error) {
             console.error('Error checking welcome status:', error);
-            setActiveView(role);
+            setActiveView(null);
           } else if (!profile?.vendor_welcome_seen) {
             setShowWelcome(true);
           } else {
-            setActiveView(role);
+            setActiveView(null);
           }
         } catch (err) {
           console.error('Error:', err);
-          setActiveView(role);
+          setActiveView(null);
         }
       } else if (role !== "user") {
-        setActiveView(role);
+        setActiveView(null);
       }
       
       setLoading(false);
     };
 
     checkWelcomeStatus();
-  }, [user, role, initialSection]);
+  }, [user, role, initialSection, ownershipLoading]);
 
   const handleWelcomeComplete = async () => {
     if (user) {
@@ -84,10 +106,10 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
       }
     }
     setShowWelcome(false);
-    setActiveView(role);
+    setActiveView(null);
   };
 
-  if (loading) {
+  if (loading || ownershipLoading) {
     return (
       <div className="p-4 flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -140,7 +162,7 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
           <ArrowRight className="w-4 h-4" />
         </button>
         <div className="px-4">
-          <h2 className="font-display text-xl font-bold text-foreground mb-4 text-right">إدارة الحجوزات</h2>
+          <h2 className="font-display text-xl font-bold text-foreground mb-4 text-right">إدارة حجوزات الخدمات</h2>
           <ServiceBookingManagement />
         </div>
       </div>
@@ -180,7 +202,13 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
     );
   }
 
-  // Show role-based dashboard options
+  // Determine what sections to show based on ACTUAL ownership, not just role
+  const showHallSection = role === "hall_owner" || ownership?.hasHalls;
+  const showServiceSection = role === "service_provider" || ownership?.hasServices;
+  const showDressSection = role === "dress_seller" || ownership?.hasDresses;
+  const hasAnyVendorContent = showHallSection || showServiceSection || showDressSection;
+
+  // Show dashboard with sections based on what user actually owns
   return (
     <div className="p-4 space-y-6">
       {/* Quick Stats */}
@@ -191,49 +219,31 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
           لوحة التحكم
         </h3>
         
-        {role === "hall_owner" && (
-          <>
-            {/* Hall Management - First */}
-            <motion.button
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={() => setActiveView("hall_owner")}
-              className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
-            >
-              <div className="w-14 h-14 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0">
-                <Building2 className="w-7 h-7 text-white" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-display text-lg font-bold text-foreground">
-                  إدارة القاعات
-                </h4>
-                <p className="text-muted-foreground font-arabic text-sm">
-                  أضف قاعاتك وأدر الحجوزات والتواريخ
-                </p>
-              </div>
-            </motion.button>
-
-            {/* Analytics Card - Second */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <VendorAnalytics />
-            </motion.div>
-          </>
+        {/* Hall Management Section */}
+        {showHallSection && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => setActiveView("hall_owner")}
+            className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
+          >
+            <div className="w-14 h-14 rounded-xl gold-gradient flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-display text-lg font-bold text-foreground">
+                إدارة القاعات
+              </h4>
+              <p className="text-muted-foreground font-arabic text-sm">
+                أضف قاعاتك وأدر الحجوزات والتواريخ
+              </p>
+            </div>
+          </motion.button>
         )}
-        
-        {role === "service_provider" && (
-          <>
-            {/* Analytics Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <VendorAnalytics />
-            </motion.div>
 
+        {/* Service Provider Section */}
+        {showServiceSection && (
+          <>
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -266,7 +276,7 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
               </div>
               <div className="flex-1">
                 <h4 className="font-display text-lg font-bold text-foreground">
-                  إدارة الحجوزات
+                  إدارة حجوزات الخدمات
                 </h4>
                 <p className="text-muted-foreground font-arabic text-sm">
                   راجع وأدر الحجوزات الواردة
@@ -296,10 +306,12 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
           </>
         )}
         
-        {role === "dress_seller" && (
+        {/* Dress Seller Section */}
+        {showDressSection && (
           <motion.button
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
             onClick={() => setActiveView("dress_seller")}
             className="w-full card-luxe rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all text-right"
           >
@@ -316,10 +328,21 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
             </div>
           </motion.button>
         )}
+
+        {/* Analytics Card - show if user has any vendor content */}
+        {hasAnyVendorContent && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <VendorAnalytics />
+          </motion.div>
+        )}
       </div>
       
       {/* Empty State - shouldn't happen but just in case */}
-      {!role || role === "user" && (
+      {!hasAnyVendorContent && (
         <div className="text-center py-12">
           <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
             <Plus className="w-10 h-10 text-muted-foreground" />
