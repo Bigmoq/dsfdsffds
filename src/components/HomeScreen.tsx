@@ -31,8 +31,9 @@ export function HomeScreen() {
   const queryClient = useQueryClient();
 
   // Build filters for the query
+  // Note: Using public_halls view which already filters is_active=true and excludes phone
   const queryFilters = useMemo(() => {
-    const f: Record<string, any> = { is_active: true };
+    const f: Record<string, any> = {};
     
     // City filter
     const cityFilter = selectedCity !== "all" ? selectedCity : filters.city;
@@ -56,7 +57,7 @@ export function HomeScreen() {
     totalCount,
   } = usePaginatedQuery<any>({
     queryKey: ['halls-paginated'],
-    tableName: 'halls',
+    tableName: 'public_halls', // Secure view that excludes sensitive data (phone)
     pageSize: PAGE_SIZE,
     orderBy: { column: 'created_at', ascending: false },
     filters: queryFilters,
