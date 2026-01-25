@@ -37,10 +37,9 @@ const pageVariants = {
 };
 
 const pageTransition: Transition = {
-  type: "spring",
-  stiffness: 300,
-  damping: 30,
-  mass: 0.8,
+  type: "tween",
+  duration: 0.15,
+  ease: "easeOut",
 };
 
 const Index = () => {

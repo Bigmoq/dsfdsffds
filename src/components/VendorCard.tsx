@@ -71,9 +71,9 @@ export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
   };
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
+      transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.15) }}
       className="card-luxe rounded-2xl overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
       onClick={handleCardClick}
     >
