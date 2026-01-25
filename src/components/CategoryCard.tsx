@@ -12,9 +12,9 @@ export function CategoryCard({ category, index, onClick }: CategoryCardProps) {
   
   return (
     <motion.button
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.04 }}
+      transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.1) }}
       whileHover={{ y: -3 }}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
