@@ -304,7 +304,7 @@ export function ServicesScreen() {
               </Badge>
             </div>
             
-            <motion.div className="grid grid-cols-3 sm:grid-cols-4 gap-3" layout>
+            <motion.div className="grid grid-cols-3 sm:grid-cols-4 gap-3 auto-rows-fr" layout>
               <AnimatePresence mode="popLayout">
                 {filteredCategories.map((category, index) => (
                   <motion.div
@@ -314,6 +314,7 @@ export function ServicesScreen() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ duration: 0.2 }}
+                    className="h-full"
                   >
                     <CategoryCard
                       category={category}
