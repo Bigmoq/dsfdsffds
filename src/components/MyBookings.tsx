@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { 
   Calendar, Users, MapPin, Clock, ChevronDown, 
-  CheckCircle, XCircle, Loader2, Building2, Package, Star
+  CheckCircle, XCircle, Loader2, Building2, Package, Star, MessageCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Database } from "@/integrations/supabase/types";
 import { AddVendorReviewSheet } from "./AddVendorReviewSheet";
 import { AddHallReviewSheet } from "./AddHallReviewSheet";
+import { ChatSheet } from "./chat/ChatSheet";
 
 type HallBooking = Database["public"]["Tables"]["hall_bookings"]["Row"] & {
-  halls: Database["public"]["Tables"]["halls"]["Row"] | null;
+  halls: (Database["public"]["Tables"]["halls"]["Row"] & { owner_id: string }) | null;
 };
 
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
@@ -46,6 +47,7 @@ interface ServiceBooking {
   service_providers: {
     name_ar: string;
     city: string;
+    owner_id: string;
   } | null;
   service_packages: {
     name_ar: string;
@@ -57,6 +59,7 @@ export function MyBookings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [chatContext, setChatContext] = useState<{ ownerId: string; hallId?: string; providerId?: string } | null>(null);
   
   // Review sheet states
   const [reviewServiceBooking, setReviewServiceBooking] = useState<ServiceBooking | null>(null);
@@ -88,7 +91,7 @@ export function MyBookings() {
         .from("service_bookings")
         .select(`
           *,
-          service_providers (name_ar, city),
+          service_providers (name_ar, city, owner_id),
           service_packages (name_ar)
         `)
         .eq("user_id", user!.id)
@@ -398,6 +401,21 @@ export function MyBookings() {
                         {getServiceStatusMessage(booking.status)}
                       </div>
 
+                      {/* Contact Button for confirmed bookings */}
+                      {booking.status === "confirmed" && booking.service_providers?.owner_id && (
+                        <Button
+                          variant="default"
+                          className="w-full"
+                          onClick={() => setChatContext({ 
+                            ownerId: booking.service_providers!.owner_id, 
+                            providerId: booking.provider_id 
+                          })}
+                        >
+                          <MessageCircle className="w-4 h-4 ml-2" />
+                          تواصل مع مقدم الخدمة
+                        </Button>
+                      )}
+
                       {/* Rate Button for completed bookings */}
                       {booking.status === "completed" && (
                         <Button
@@ -555,6 +573,21 @@ export function MyBookings() {
                         {getStatusMessage(booking.status)}
                       </div>
 
+                      {/* Contact Button for accepted hall bookings */}
+                      {booking.status === "accepted" && booking.halls?.owner_id && (
+                        <Button
+                          variant="default"
+                          className="w-full"
+                          onClick={() => setChatContext({ 
+                            ownerId: booking.halls!.owner_id, 
+                            hallId: booking.hall_id 
+                          })}
+                        >
+                          <MessageCircle className="w-4 h-4 ml-2" />
+                          تواصل مع القاعة
+                        </Button>
+                      )}
+
                       {/* Rate Button for accepted hall bookings */}
                       {booking.status === "accepted" && (
                         <Button
@@ -613,6 +646,17 @@ export function MyBookings() {
           queryClient.invalidateQueries({ queryKey: ['user-hall-reviews'] });
           setReviewHallBooking(null);
         }}
+      />
+    )}
+
+    {/* Chat Sheet */}
+    {chatContext && (
+      <ChatSheet
+        open={!!chatContext}
+        onOpenChange={(open) => !open && setChatContext(null)}
+        otherUserId={chatContext.ownerId}
+        hallId={chatContext.hallId}
+        providerId={chatContext.providerId}
       />
     )}
   </>
