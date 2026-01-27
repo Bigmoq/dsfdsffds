@@ -53,8 +53,9 @@ export default function Auth() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({}); 
+  const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string; name?: string }>({});
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [verifyingOtp, setVerifyingOtp] = useState(false);
@@ -107,6 +108,11 @@ export default function Auth() {
       const nameResult = nameSchema.safeParse(fullName);
       if (!nameResult.success) {
         newErrors.name = nameResult.error.errors[0].message;
+      }
+      
+      // Validate confirm password
+      if (password !== confirmPassword) {
+        newErrors.confirmPassword = "كلمتا المرور غير متطابقتين";
       }
     }
     
@@ -376,6 +382,7 @@ export default function Auth() {
   const resetForm = () => {
     setEmail("");
     setPassword("");
+    setConfirmPassword("");
     setFullName("");
     setErrors({});
     setOtpCode("");
@@ -708,6 +715,37 @@ export default function Auth() {
                       </div>
                     )}
                   </div>
+                  
+                  {/* Confirm Password Field - Only for signup */}
+                  {mode === "signup" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword" className="font-arabic text-right block">
+                        تأكيد كلمة المرور
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="أعد إدخال كلمة المرور"
+                          className="pr-10 pl-10"
+                          dir="ltr"
+                        />
+                        <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                      {errors.confirmPassword && (
+                        <p className="text-destructive text-sm font-arabic">{errors.confirmPassword}</p>
+                      )}
+                    </div>
+                  )}
                   
                   <Button
                     type="submit"
