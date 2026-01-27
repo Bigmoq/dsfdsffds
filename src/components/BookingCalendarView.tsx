@@ -264,6 +264,23 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
     if (dateBookings.length > 0) {
       setSelectedDate(date);
       setSheetOpen(true);
+    } else {
+      // Open add external booking form with the selected date
+      const isPast = isBefore(date, today);
+      if (!isPast) {
+        setExternalBooking({
+          customerName: "",
+          phone: "",
+          bookingDate: format(date, "yyyy-MM-dd"),
+          totalPrice: "",
+          notes: "",
+          depositPaid: false,
+          guestCountMen: "",
+          guestCountWomen: "",
+        });
+        setEditExternalMode(false);
+        setAddExternalOpen(true);
+      }
     }
   };
 
@@ -683,12 +700,13 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.003 }}
                   onClick={() => handleDateClick(day)}
-                  disabled={!hasBookings}
+                  disabled={isPast && !hasBookings}
                   className={cn(
                     "min-h-[70px] rounded-lg flex flex-col items-stretch p-1 relative transition-all text-right",
                     isToday(day) && "ring-2 ring-primary",
                     hasBookings && "cursor-pointer hover:shadow-md",
-                    !hasBookings && "cursor-default bg-muted/30",
+                    !hasBookings && !isPast && "cursor-pointer hover:bg-primary/10 bg-muted/30 hover:ring-1 hover:ring-primary/50",
+                    !hasBookings && isPast && "cursor-default bg-muted/30",
                     hasBookings && !isPast && "bg-muted/50",
                     isPast && "opacity-50"
                   )}
@@ -713,7 +731,7 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
                   </div>
 
                   {/* Booking Info */}
-                  {hasBookings && (
+                  {hasBookings ? (
                     <div className="flex-1 mt-1 space-y-0.5 overflow-hidden">
                       {/* Customer Name */}
                       {customerName && (
@@ -750,6 +768,10 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
                           {notes}
                         </p>
                       )}
+                    </div>
+                  ) : !isPast && (
+                    <div className="flex-1 flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-muted-foreground/50" />
                     </div>
                   )}
                 </motion.button>
