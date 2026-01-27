@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { saudiCities } from "@/data/weddingData";
 import { LocationPicker } from "@/components/LocationPicker";
 import { SortableFeatureList } from "@/components/SortableFeatureList";
+import { compressImage, compressImages } from "@/utils/imageCompression";
 import type { Database } from "@/integrations/supabase/types";
 
 type Hall = Database["public"]["Tables"]["halls"]["Row"];
@@ -152,12 +153,22 @@ export function EditHallSheet({ open, onOpenChange, onSuccess, hall }: EditHallS
 
     setIsUploadingCover(true);
     try {
-      const url = await uploadImage(file, "covers");
+      // Compress image before upload
+      const originalSize = file.size;
+      const compressedFile = await compressImage(file);
+      const newSize = compressedFile.size;
+      
+      const url = await uploadImage(compressedFile, "covers");
       if (url) {
         setCoverImage(url);
+        const savedPercentage = originalSize > newSize 
+          ? Math.round((1 - newSize / originalSize) * 100)
+          : 0;
         toast({
           title: "تم الرفع",
-          description: "تم رفع صورة الغلاف بنجاح",
+          description: savedPercentage > 0 
+            ? `تم رفع صورة الغلاف بنجاح (تم ضغط ${savedPercentage}%)`
+            : "تم رفع صورة الغلاف بنجاح",
         });
       }
     } catch (error: any) {
@@ -192,14 +203,17 @@ export function EditHallSheet({ open, onOpenChange, onSuccess, hall }: EditHallS
 
     setIsUploadingGallery(true);
     try {
-      const uploadPromises = filesToUpload.map((file) => uploadImage(file, "gallery"));
+      // Compress all images before upload
+      const compressedFiles = await compressImages(filesToUpload);
+      
+      const uploadPromises = compressedFiles.map((file) => uploadImage(file, "gallery"));
       const uploadedUrls = await Promise.all(uploadPromises);
       const validUrls = uploadedUrls.filter((url): url is string => url !== null);
       
       setGalleryImages((prev) => [...prev, ...validUrls]);
       toast({
         title: "تم الرفع",
-        description: `تم رفع ${validUrls.length} صورة بنجاح`,
+        description: `تم رفع وضغط ${validUrls.length} صورة بنجاح`,
       });
     } catch (error: any) {
       toast({

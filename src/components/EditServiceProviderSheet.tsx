@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { saudiCities, womenCategories, menCategories } from "@/data/weddingData";
 import { SortableImageList } from "@/components/SortableImageList";
+import { compressImages } from "@/utils/imageCompression";
 import type { Database } from "@/integrations/supabase/types";
 
 type ServiceProvider = Database["public"]["Tables"]["service_providers"]["Row"];
@@ -111,7 +112,10 @@ export function EditServiceProviderSheet({ open, onOpenChange, onSuccess, provid
     setIsUploading(true);
 
     try {
-      const uploadPromises = filesToUpload.map((file) => uploadImage(file));
+      // Compress all images before upload
+      const compressedFiles = await compressImages(filesToUpload);
+      
+      const uploadPromises = compressedFiles.map((file) => uploadImage(file));
       const uploadedUrls = await Promise.all(uploadPromises);
       const validUrls = uploadedUrls.filter((url): url is string => url !== null);
 
@@ -119,7 +123,7 @@ export function EditServiceProviderSheet({ open, onOpenChange, onSuccess, provid
 
       toast({
         title: "تم الرفع",
-        description: `تم رفع ${validUrls.length} صورة بنجاح`,
+        description: `تم رفع وضغط ${validUrls.length} صورة بنجاح`,
       });
     } catch (error: any) {
       toast({
