@@ -5,15 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Upload, Loader2, ImageIcon, Phone, Plus } from "lucide-react";
+import { X, Upload, Loader2, ImageIcon, Phone } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { saudiCities } from "@/data/weddingData";
 import { LocationPicker } from "@/components/LocationPicker";
+import { SortableFeatureList } from "@/components/SortableFeatureList";
 import type { Database } from "@/integrations/supabase/types";
 
 type Hall = Database["public"]["Tables"]["halls"]["Row"];
@@ -39,7 +39,6 @@ export function EditHallSheet({ open, onOpenChange, onSuccess, hall }: EditHallS
   const [longitude, setLongitude] = useState<number | null>(null);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [noFeatures, setNoFeatures] = useState(false);
-  const [customFeature, setCustomFeature] = useState("");
 
   const availableFeatures = [
     "مواقف سيارات",
@@ -117,34 +116,6 @@ export function EditHallSheet({ open, onOpenChange, onSuccess, hall }: EditHallS
   const handleLocationChange = (lat: number | null, lng: number | null) => {
     setLatitude(lat);
     setLongitude(lng);
-  };
-
-  const toggleFeature = (feature: string) => {
-    setSelectedFeatures(prev =>
-      prev.includes(feature)
-        ? prev.filter(f => f !== feature)
-        : [...prev, feature]
-    );
-  };
-
-  const handleNoFeatures = (checked: boolean) => {
-    setNoFeatures(checked);
-    if (checked) {
-      setSelectedFeatures([]);
-      setCustomFeature("");
-    }
-  };
-
-  const addCustomFeature = () => {
-    const trimmed = customFeature.trim();
-    if (trimmed && !selectedFeatures.includes(trimmed)) {
-      setSelectedFeatures(prev => [...prev, trimmed]);
-      setCustomFeature("");
-    }
-  };
-
-  const removeCustomFeature = (feature: string) => {
-    setSelectedFeatures(prev => prev.filter(f => f !== feature));
   };
 
   const uploadImage = async (file: File, folder: string): Promise<string | null> => {
@@ -644,93 +615,13 @@ export function EditHallSheet({ open, onOpenChange, onSuccess, hall }: EditHallS
           </div>
 
           {/* Features Section */}
-          <div className="space-y-3">
-            <Label className="font-arabic font-semibold">المميزات</Label>
-            
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="noFeatures"
-                checked={noFeatures}
-                onCheckedChange={(checked) => handleNoFeatures(checked as boolean)}
-              />
-              <Label htmlFor="noFeatures" className="font-arabic text-sm cursor-pointer">
-                لا توجد مميزات
-              </Label>
-            </div>
-
-            {!noFeatures && (
-              <>
-                <div className="grid grid-cols-2 gap-2">
-                  {availableFeatures.map((feature) => (
-                    <button
-                      key={feature}
-                      type="button"
-                      onClick={() => toggleFeature(feature)}
-                      className={`p-2 text-sm rounded-lg border transition-colors font-arabic ${
-                        selectedFeatures.includes(feature)
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border hover:border-primary"
-                      }`}
-                    >
-                      {feature}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Custom Features */}
-                <div className="space-y-2">
-                  <Label className="font-arabic text-sm">إضافة ميزة مخصصة</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={customFeature}
-                      onChange={(e) => setCustomFeature(e.target.value)}
-                      placeholder="اكتب ميزة جديدة..."
-                      className="text-right font-arabic"
-                      dir="rtl"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addCustomFeature();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={addCustomFeature}
-                      disabled={!customFeature.trim()}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Display custom features (ones not in availableFeatures) */}
-                {selectedFeatures.filter(f => !availableFeatures.includes(f)).length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedFeatures
-                      .filter(f => !availableFeatures.includes(f))
-                      .map((feature) => (
-                        <span
-                          key={feature}
-                          className="inline-flex items-center gap-1 px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm font-arabic"
-                        >
-                          {feature}
-                          <button
-                            type="button"
-                            onClick={() => removeCustomFeature(feature)}
-                            className="hover:text-destructive"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </span>
-                      ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          <SortableFeatureList
+            selectedFeatures={selectedFeatures}
+            setSelectedFeatures={setSelectedFeatures}
+            noFeatures={noFeatures}
+            setNoFeatures={setNoFeatures}
+            availableFeatures={availableFeatures}
+          />
           
           <Button
             type="submit"
