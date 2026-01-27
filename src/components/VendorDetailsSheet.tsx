@@ -69,6 +69,7 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
   const [loading, setLoading] = useState(true);
   const [bookingSheetOpen, setBookingSheetOpen] = useState(false);
   const [selectedBookingDate, setSelectedBookingDate] = useState<Date | undefined>();
+  const [selectedBookingPackage, setSelectedBookingPackage] = useState<ServicePackage | undefined>();
   const [chatOpen, setChatOpen] = useState(false);
   const [vendorOwnerId, setVendorOwnerId] = useState<string | null>(null);
   
@@ -382,7 +383,11 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      className="card-luxe p-4 rounded-xl"
+                      onClick={() => {
+                        setSelectedBookingPackage(pkg);
+                        setBookingSheetOpen(true);
+                      }}
+                      className="card-luxe p-4 rounded-xl cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all active:scale-[0.98]"
                     >
                       <div className="flex items-start justify-between">
                         <Badge className="bg-primary/10 text-primary border-0 font-bold">
@@ -397,6 +402,10 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
                           {pkg.description}
                         </p>
                       )}
+                      <div className="flex items-center justify-end gap-1 mt-3 text-primary text-sm font-arabic">
+                        <span>اضغط للحجز</span>
+                        <CalendarPlus className="w-4 h-4" />
+                      </div>
                     </motion.div>
                   ))}
                 </div>
@@ -477,6 +486,7 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
             onClose={() => {
               setBookingSheetOpen(false);
               setSelectedBookingDate(undefined);
+              setSelectedBookingPackage(undefined);
             }}
             provider={{
               id: vendor.id,
@@ -485,6 +495,7 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
             }}
             packages={packages}
             initialDate={selectedBookingDate}
+            initialPackage={selectedBookingPackage}
           />
         )}
 
