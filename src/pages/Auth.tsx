@@ -15,6 +15,34 @@ const emailSchema = z.string().email("الرجاء إدخال بريد إلكت�
 const passwordSchema = z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل");
 const nameSchema = z.string().min(2, "الاسم يجب أن يكون حرفين على الأقل");
 
+// Password strength calculator
+const getPasswordStrength = (password: string): { level: 'weak' | 'medium' | 'strong'; label: string; color: string; percentage: number } => {
+  if (password.length === 0) {
+    return { level: 'weak', label: '', color: '', percentage: 0 };
+  }
+  
+  let score = 0;
+  
+  // Length checks
+  if (password.length >= 6) score += 1;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  
+  // Character variety checks
+  if (/[a-z]/.test(password)) score += 1;
+  if (/[A-Z]/.test(password)) score += 1;
+  if (/[0-9]/.test(password)) score += 1;
+  if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+  
+  if (score <= 2) {
+    return { level: 'weak', label: 'ضعيفة', color: 'bg-red-500', percentage: 33 };
+  } else if (score <= 4) {
+    return { level: 'medium', label: 'متوسطة', color: 'bg-yellow-500', percentage: 66 };
+  } else {
+    return { level: 'strong', label: 'قوية', color: 'bg-green-500', percentage: 100 };
+  }
+};
+
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -648,9 +676,30 @@ export default function Auth() {
                     {errors.password ? (
                       <p className="text-destructive text-sm font-arabic">{errors.password}</p>
                     ) : mode === "signup" && (
-                      <p className="text-muted-foreground text-xs font-arabic">
-                        يجب أن تكون كلمة المرور 6 أحرف على الأقل
-                      </p>
+                      <div className="space-y-2">
+                        {password.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-arabic text-muted-foreground">قوة كلمة المرور:</span>
+                              <span className={`text-xs font-arabic font-medium ${
+                                getPasswordStrength(password).level === 'weak' ? 'text-red-500' :
+                                getPasswordStrength(password).level === 'medium' ? 'text-yellow-600' : 'text-green-500'
+                              }`}>
+                                {getPasswordStrength(password).label}
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all duration-300 ${getPasswordStrength(password).color}`}
+                                style={{ width: `${getPasswordStrength(password).percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        <p className="text-muted-foreground text-xs font-arabic">
+                          يجب أن تكون كلمة المرور 6 أحرف على الأقل
+                        </p>
+                      </div>
                     )}
                   </div>
                   
