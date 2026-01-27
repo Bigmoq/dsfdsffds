@@ -30,6 +30,7 @@ export default function Auth() {
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -46,6 +47,17 @@ export default function Auth() {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Countdown timer for resend OTP
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -158,6 +170,8 @@ export default function Auth() {
   };
 
   const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    
     setLoading(true);
     try {
       const { error } = await supabase.auth.resend({
@@ -177,6 +191,7 @@ export default function Auth() {
           description: "تم إعادة إرسال رمز التفعيل بنجاح",
         });
         setOtpCode("");
+        setResendCooldown(60); // Start 60 second countdown
       }
     } catch (err) {
       toast({
@@ -187,6 +202,10 @@ export default function Auth() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const startResendCooldown = () => {
+    setResendCooldown(60);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -273,6 +292,7 @@ export default function Auth() {
         setRegisteredEmail(email);
         setOtpCode("");
         setMode("verify-email");
+        setResendCooldown(60); // Start countdown immediately after signup
         toast({
           title: "تم إنشاء الحساب!",
           description: "تم إرسال رمز التفعيل إلى بريدك الإلكتروني",
@@ -512,11 +532,19 @@ export default function Auth() {
                   <Button
                     variant="outline"
                     onClick={handleResendOtp}
-                    disabled={loading}
+                    disabled={loading || resendCooldown > 0}
                     className="w-full py-5 font-arabic"
                   >
                     {loading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : resendCooldown > 0 ? (
+                      <span className="flex items-center gap-2">
+                        إعادة الإرسال بعد
+                        <span className="inline-flex items-center justify-center min-w-[2rem] h-6 px-2 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                          {resendCooldown}
+                        </span>
+                        ثانية
+                      </span>
                     ) : (
                       "إعادة إرسال الرمز"
                     )}
