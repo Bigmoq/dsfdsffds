@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, Upload, Loader2, ImageIcon, Phone } from "lucide-react";
+import { SortableImageList } from "@/components/SortableImageList";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
@@ -355,41 +356,14 @@ export function EditHallSheet({ open, onOpenChange, onSuccess, hall }: EditHallS
           {/* Gallery Images Upload */}
           <div className="space-y-2">
             <Label className="font-arabic">معرض الصور (حتى 10 صور)</Label>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {galleryImages.map((img, idx) => (
-                <div key={idx} className="relative w-20 h-20 flex-shrink-0">
-                  <img
-                    src={img}
-                    alt=""
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeGalleryImage(idx)}
-                    className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-              {galleryImages.length < 10 && (
-                <button
-                  type="button"
-                  onClick={() => galleryInputRef.current?.click()}
-                  disabled={isUploadingGallery}
-                  className="w-20 h-20 flex-shrink-0 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors disabled:opacity-50"
-                >
-                  {isUploadingGallery ? (
-                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                  ) : (
-                    <>
-                      <Upload className="w-5 h-5 text-muted-foreground mb-1" />
-                      <span className="text-[10px] text-muted-foreground font-arabic">رفع</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
+            <SortableImageList
+              images={galleryImages}
+              setImages={setGalleryImages}
+              onRemove={removeGalleryImage}
+              onUploadClick={() => galleryInputRef.current?.click()}
+              isUploading={isUploadingGallery}
+              maxImages={10}
+            />
             <input
               ref={galleryInputRef}
               type="file"
