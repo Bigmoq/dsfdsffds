@@ -363,7 +363,13 @@ export function EditHallSheet({ open, onOpenChange, onSuccess, hall }: EditHallS
               onUploadClick={() => galleryInputRef.current?.click()}
               isUploading={isUploadingGallery}
               maxImages={10}
-              onSetAsCover={(url) => setCoverImage(url)}
+              onSetAsCover={(url) => {
+                setCoverImage(url);
+                toast({
+                  title: "تم التعيين",
+                  description: "تم تعيين الصورة كغلاف بنجاح",
+                });
+              }}
             />
             <input
               ref={galleryInputRef}
