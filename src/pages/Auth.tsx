@@ -645,8 +645,12 @@ export default function Auth() {
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
-                    {errors.password && (
+                    {errors.password ? (
                       <p className="text-destructive text-sm font-arabic">{errors.password}</p>
+                    ) : mode === "signup" && (
+                      <p className="text-muted-foreground text-xs font-arabic">
+                        يجب أن تكون كلمة المرور 6 أحرف على الأقل
+                      </p>
                     )}
                   </div>
                   
