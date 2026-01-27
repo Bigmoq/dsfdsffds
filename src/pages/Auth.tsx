@@ -224,9 +224,16 @@ export default function Auth() {
         
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
+            setErrors(prev => ({ ...prev, password: "كلمة المرور غير صحيحة" }));
             toast({
               title: "خطأ في تسجيل الدخول",
               description: "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+              variant: "destructive",
+            });
+          } else if (error.message.includes("Email not confirmed")) {
+            toast({
+              title: "البريد الإلكتروني غير مفعل",
+              description: "الرجاء التحقق من بريدك الإلكتروني لتفعيل الحساب",
               variant: "destructive",
             });
           } else {
