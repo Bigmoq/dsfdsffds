@@ -696,9 +696,15 @@ export default function Auth() {
                             </div>
                           </div>
                         )}
-                        <p className="text-muted-foreground text-xs font-arabic">
-                          يجب أن تكون كلمة المرور 6 أحرف على الأقل
-                        </p>
+                        <div className="text-muted-foreground text-xs font-arabic space-y-0.5">
+                          <p>يجب أن تحتوي كلمة المرور على:</p>
+                          <ul className="list-disc list-inside pr-2 space-y-0.5">
+                            <li>6 أحرف على الأقل</li>
+                            <li>حرف كبير (A-Z)</li>
+                            <li>رقم (0-9)</li>
+                            <li>رمز خاص (!@#$%...)</li>
+                          </ul>
+                        </div>
                       </div>
                     )}
                   </div>
