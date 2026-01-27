@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Upload, Loader2, ImageIcon, Phone, Check } from "lucide-react";
+import { X, Upload, Loader2, ImageIcon, Phone, Check, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,6 +36,7 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
   
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [noFeatures, setNoFeatures] = useState(false);
+  const [customFeature, setCustomFeature] = useState("");
   
   const availableFeatures = [
     "موقف سيارات",
@@ -251,6 +252,7 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
     setLongitude(null);
     setSelectedFeatures([]);
     setNoFeatures(false);
+    setCustomFeature("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -502,25 +504,88 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
             
             {/* Features Grid */}
             {!noFeatures && (
-              <div className="grid grid-cols-2 gap-2">
-                {availableFeatures.map((feature) => (
-                  <button
-                    key={feature}
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {availableFeatures.map((feature) => (
+                    <button
+                      key={feature}
+                      type="button"
+                      onClick={() => toggleFeature(feature)}
+                      className={`p-2.5 rounded-lg border text-sm font-arabic text-right transition-all flex items-center justify-between gap-2 ${
+                        selectedFeatures.includes(feature)
+                          ? "bg-primary/10 border-primary text-primary"
+                          : "bg-card border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <span>{feature}</span>
+                      {selectedFeatures.includes(feature) && (
+                        <Check className="w-4 h-4 flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Custom Features Display */}
+                {selectedFeatures.filter(f => !availableFeatures.includes(f)).length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="font-arabic text-sm text-muted-foreground">مميزات مخصصة:</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedFeatures.filter(f => !availableFeatures.includes(f)).map((feature) => (
+                        <span
+                          key={feature}
+                          className="bg-primary/10 text-primary text-sm px-3 py-1.5 rounded-full flex items-center gap-2"
+                        >
+                          {feature}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFeatures(prev => prev.filter(f => f !== feature))}
+                            className="hover:bg-primary/20 rounded-full p-0.5"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Add Custom Feature */}
+                <div className="flex gap-2">
+                  <Input
+                    value={customFeature}
+                    onChange={(e) => setCustomFeature(e.target.value)}
+                    placeholder="أضف ميزة مخصصة..."
+                    className="text-right font-arabic flex-1"
+                    dir="rtl"
+                    maxLength={50}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const trimmed = customFeature.trim();
+                        if (trimmed && !selectedFeatures.includes(trimmed)) {
+                          setSelectedFeatures(prev => [...prev, trimmed]);
+                          setCustomFeature("");
+                        }
+                      }
+                    }}
+                  />
+                  <Button
                     type="button"
-                    onClick={() => toggleFeature(feature)}
-                    className={`p-2.5 rounded-lg border text-sm font-arabic text-right transition-all flex items-center justify-between gap-2 ${
-                      selectedFeatures.includes(feature)
-                        ? "bg-primary/10 border-primary text-primary"
-                        : "bg-card border-border hover:border-primary/50"
-                    }`}
+                    variant="outline"
+                    size="icon"
+                    disabled={!customFeature.trim() || selectedFeatures.includes(customFeature.trim())}
+                    onClick={() => {
+                      const trimmed = customFeature.trim();
+                      if (trimmed && !selectedFeatures.includes(trimmed)) {
+                        setSelectedFeatures(prev => [...prev, trimmed]);
+                        setCustomFeature("");
+                      }
+                    }}
                   >
-                    <span>{feature}</span>
-                    {selectedFeatures.includes(feature) && (
-                      <Check className="w-4 h-4 flex-shrink-0" />
-                    )}
-                  </button>
-                ))}
-              </div>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </>
             )}
             
             {selectedFeatures.length > 0 && !noFeatures && (
