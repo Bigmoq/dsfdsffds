@@ -15,16 +15,17 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, X, Upload, Loader2 } from "lucide-react";
+import { GripVertical, X, Upload, Loader2, ImageIcon } from "lucide-react";
 
 interface SortableImageItemProps {
   id: string;
   url: string;
   index: number;
   onRemove: (index: number) => void;
+  onSetAsCover?: (url: string) => void;
 }
 
-function SortableImageItem({ id, url, index, onRemove }: SortableImageItemProps) {
+function SortableImageItem({ id, url, index, onRemove, onSetAsCover }: SortableImageItemProps) {
   const {
     attributes,
     listeners,
@@ -73,6 +74,18 @@ function SortableImageItem({ id, url, index, onRemove }: SortableImageItemProps)
         <X className="w-3 h-3" />
       </button>
       
+      {/* Set as Cover Button */}
+      {onSetAsCover && (
+        <button
+          type="button"
+          onClick={() => onSetAsCover(url)}
+          className="absolute bottom-1 left-1 bg-primary text-primary-foreground rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          title="تعيين كصورة غلاف"
+        >
+          <ImageIcon className="w-3 h-3" />
+        </button>
+      )}
+      
       {/* Index Badge */}
       <span className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] rounded px-1">
         {index + 1}
@@ -88,6 +101,7 @@ interface SortableImageListProps {
   onUploadClick: () => void;
   isUploading: boolean;
   maxImages?: number;
+  onSetAsCover?: (url: string) => void;
 }
 
 export function SortableImageList({
@@ -97,6 +111,7 @@ export function SortableImageList({
   onUploadClick,
   isUploading,
   maxImages = 10,
+  onSetAsCover,
 }: SortableImageListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -137,6 +152,7 @@ export function SortableImageList({
                 url={img}
                 index={idx}
                 onRemove={onRemove}
+                onSetAsCover={onSetAsCover}
               />
             ))}
             
