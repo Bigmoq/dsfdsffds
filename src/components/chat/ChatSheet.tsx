@@ -285,6 +285,14 @@ export function ChatSheet({
                     !isOwn && 
                     (index === 0 || messages[index - 1]?.sender_id !== message.sender_id);
                   
+                  // استخدام sender_profile من الرسالة إذا كان متاحاً، وإلا استخدام resolvedOtherUser
+                  const senderName = !isOwn 
+                    ? (message.sender_profile?.full_name || resolvedOtherUser?.name || 'مستخدم')
+                    : null;
+                  const senderAvatar = !isOwn 
+                    ? (message.sender_profile?.avatar_url || resolvedOtherUser?.avatar || null)
+                    : null;
+                  
                   return (
                     <motion.div
                       key={message.id}
@@ -296,9 +304,9 @@ export function ChatSheet({
                     >
                       {!isOwn && showAvatar ? (
                         <Avatar className="w-7 h-7 mb-5">
-                          <AvatarImage src={resolvedOtherUser?.avatar || undefined} />
+                          <AvatarImage src={senderAvatar || undefined} />
                           <AvatarFallback className="text-xs bg-muted">
-                            {getInitials(resolvedOtherUser?.name || 'م')}
+                            {getInitials(senderName || 'م')}
                           </AvatarFallback>
                         </Avatar>
                       ) : !isOwn ? (
