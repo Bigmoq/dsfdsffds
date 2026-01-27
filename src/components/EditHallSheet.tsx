@@ -363,6 +363,7 @@ export function EditHallSheet({ open, onOpenChange, onSuccess, hall }: EditHallS
               onUploadClick={() => galleryInputRef.current?.click()}
               isUploading={isUploadingGallery}
               maxImages={10}
+              onSetAsCover={(url) => setCoverImage(url)}
             />
             <input
               ref={galleryInputRef}

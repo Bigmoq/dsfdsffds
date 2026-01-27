@@ -372,6 +372,7 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
               onUploadClick={() => galleryInputRef.current?.click()}
               isUploading={isUploadingGallery}
               maxImages={10}
+              onSetAsCover={(url) => setCoverImage(url)}
             />
             <input
               ref={galleryInputRef}
