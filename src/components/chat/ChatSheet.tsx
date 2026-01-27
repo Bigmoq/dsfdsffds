@@ -413,7 +413,7 @@ export function ChatSheet({
                 ref={inputRef}
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 placeholder="اكتب رسالتك..."
                 className="pr-4 pl-4 py-6 rounded-full bg-muted/50 border-0 font-arabic text-right focus-visible:ring-primary/50"
                 disabled={sending || uploading || loading || initializing}
