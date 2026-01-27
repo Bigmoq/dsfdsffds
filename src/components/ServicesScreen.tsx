@@ -167,10 +167,9 @@ export function ServicesScreen() {
             <>
               <button
                 onClick={handleBack}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-3 mx-auto"
+                className="flex items-center gap-2 px-4 py-2 bg-card border border-border/60 rounded-full text-foreground hover:bg-muted hover:border-primary/40 transition-all mb-3 mx-auto shadow-sm"
               >
-                <span className="font-arabic text-sm">العودة للخدمات</span>
-                <ArrowRight className="w-4 h-4" />
+                <span className="font-arabic text-sm font-medium">← العودة للخدمات</span>
               </button>
               <h1 className="font-display text-2xl font-bold text-foreground mb-1">
                 {selectedCategory.nameAr}
