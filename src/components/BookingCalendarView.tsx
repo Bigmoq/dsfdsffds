@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronRight, CalendarDays, User, Users, Package, 
   Loader2, Phone, MessageCircle, Clock, CreditCard, Check, X, 
   Ban, Tag, RotateCcw, CheckCircle2, Edit, DollarSign, AlertCircle, Plus,
-  Trash2, ExternalLink
+  Trash2, ExternalLink, Lock, Unlock, CalendarOff
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -99,6 +99,11 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
     guestCountMen: "",
     guestCountWomen: "",
   });
+  
+  // Availability state
+  const [dateActionSheetOpen, setDateActionSheetOpen] = useState(false);
+  const [selectedEmptyDate, setSelectedEmptyDate] = useState<Date | null>(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   const today = startOfDay(new Date());
 
@@ -193,6 +198,48 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
     enabled: entityIds.length > 0,
   });
 
+  // Fetch availability data
+  const { data: availabilityData = [] } = useQuery({
+    queryKey: [`${type}-availability`, entityIds, format(currentMonth, "yyyy-MM")],
+    queryFn: async () => {
+      if (!entityIds.length) return [];
+
+      const monthStart = format(startOfMonth(currentMonth), "yyyy-MM-dd");
+      const monthEnd = format(endOfMonth(currentMonth), "yyyy-MM-dd");
+
+      if (type === "hall") {
+        const { data, error } = await supabase
+          .from("hall_availability")
+          .select("*")
+          .in("hall_id", entityIds)
+          .gte("date", monthStart)
+          .lte("date", monthEnd);
+
+        if (error) throw error;
+        return data || [];
+      } else {
+        const { data, error } = await supabase
+          .from("service_provider_availability")
+          .select("*")
+          .in("provider_id", entityIds)
+          .gte("date", monthStart)
+          .lte("date", monthEnd);
+
+        if (error) throw error;
+        return data || [];
+      }
+    },
+    enabled: entityIds.length > 0,
+  });
+
+  // Check if date is blocked (unavailable)
+  const isDateBlocked = (date: Date): boolean => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return availabilityData.some((a: { date: string; status: string }) => 
+      a.date === dateStr && a.status === "unavailable"
+    );
+  };
+
   // Update booking mutation
   const updateMutation = useMutation({
     mutationFn: async ({ bookingId, updates }: { bookingId: string; updates: Record<string, unknown> }) => {
@@ -261,26 +308,102 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
 
   const handleDateClick = (date: Date) => {
     const dateBookings = getBookingsForDate(date);
+    const isPast = isBefore(date, today);
+    
     if (dateBookings.length > 0) {
       setSelectedDate(date);
       setSheetOpen(true);
-    } else {
-      // Open add external booking form with the selected date
-      const isPast = isBefore(date, today);
-      if (!isPast) {
-        setExternalBooking({
-          customerName: "",
-          phone: "",
-          bookingDate: format(date, "yyyy-MM-dd"),
-          totalPrice: "",
-          notes: "",
-          depositPaid: false,
-          guestCountMen: "",
-          guestCountWomen: "",
-        });
-        setEditExternalMode(false);
-        setAddExternalOpen(true);
+    } else if (!isPast) {
+      // Show action sheet for empty dates
+      setSelectedEmptyDate(date);
+      setDateActionSheetOpen(true);
+    }
+  };
+
+  // Handle add booking from action sheet
+  const handleAddBookingFromSheet = () => {
+    if (!selectedEmptyDate) return;
+    setExternalBooking({
+      customerName: "",
+      phone: "",
+      bookingDate: format(selectedEmptyDate, "yyyy-MM-dd"),
+      totalPrice: "",
+      notes: "",
+      depositPaid: false,
+      guestCountMen: "",
+      guestCountWomen: "",
+    });
+    setEditExternalMode(false);
+    setDateActionSheetOpen(false);
+    setAddExternalOpen(true);
+  };
+
+  // Handle toggle availability
+  const handleToggleAvailability = async () => {
+    if (!selectedEmptyDate || !entities?.length) return;
+    
+    setAvailabilityLoading(true);
+    const entityId = entities[0].id;
+    const dateStr = format(selectedEmptyDate, "yyyy-MM-dd");
+    const currentlyBlocked = isDateBlocked(selectedEmptyDate);
+    
+    try {
+      if (type === "hall") {
+        if (currentlyBlocked) {
+          // Remove unavailable status
+          await supabase
+            .from("hall_availability")
+            .delete()
+            .eq("hall_id", entityId)
+            .eq("date", dateStr)
+            .eq("status", "unavailable");
+        } else {
+          // Set as unavailable
+          await supabase.from("hall_availability").upsert({
+            hall_id: entityId,
+            date: dateStr,
+            status: "unavailable" as const,
+            notes: "محجوب يدوياً",
+          }, { onConflict: "hall_id,date" });
+        }
+      } else {
+        if (currentlyBlocked) {
+          // Remove unavailable status
+          await supabase
+            .from("service_provider_availability")
+            .delete()
+            .eq("provider_id", entityId)
+            .eq("date", dateStr)
+            .eq("status", "unavailable");
+        } else {
+          // Set as unavailable
+          await supabase.from("service_provider_availability").upsert({
+            provider_id: entityId,
+            date: dateStr,
+            status: "unavailable" as const,
+            notes: "محجوب يدوياً",
+          }, { onConflict: "provider_id,date" });
+        }
       }
+
+      toast({
+        title: currentlyBlocked ? "تم إتاحة الموعد" : "تم حجب الموعد",
+        description: currentlyBlocked 
+          ? "أصبح هذا التاريخ متاحاً للحجز الآن"
+          : "لن يظهر هذا التاريخ للعملاء كموعد متاح",
+      });
+
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: [`${type}-availability`] });
+      setDateActionSheetOpen(false);
+    } catch (error) {
+      toast({ 
+        title: "خطأ", 
+        description: "فشل تحديث حالة التوفر", 
+        variant: "destructive" 
+      });
+    } finally {
+      setAvailabilityLoading(false);
     }
   };
 
