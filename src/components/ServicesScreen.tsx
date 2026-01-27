@@ -165,12 +165,6 @@ export function ServicesScreen() {
         >
           {selectedCategory ? (
             <>
-              <button
-                onClick={handleBack}
-                className="flex items-center gap-2 px-4 py-2 bg-card border border-border/60 rounded-full text-foreground hover:bg-muted hover:border-primary/40 transition-all mb-3 mx-auto shadow-sm"
-              >
-                <span className="font-arabic text-sm font-medium">← العودة للخدمات</span>
-              </button>
               <h1 className="font-display text-2xl font-bold text-foreground mb-1">
                 {selectedCategory.nameAr}
               </h1>
@@ -236,6 +230,27 @@ export function ServicesScreen() {
         )}
       </div>
       
+      {/* Sticky Back Button */}
+      {selectedCategory && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/40 px-4 py-3"
+        >
+          <div className="flex items-center justify-between max-w-md mx-auto">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary/10 to-secondary/20 border border-primary/20 rounded-xl text-foreground hover:from-primary/20 hover:to-secondary/30 hover:border-primary/40 transition-all shadow-sm group"
+            >
+              <span className="font-arabic text-sm font-semibold group-hover:translate-x-1 transition-transform">← العودة</span>
+            </button>
+            <Badge variant="secondary" className="font-arabic">
+              {allVendors.length} {totalCount > allVendors.length ? `من ${totalCount}` : ''} مقدم خدمة
+            </Badge>
+          </div>
+        </motion.div>
+      )}
+
       <AnimatePresence mode="wait">
         {selectedCategory ? (
           <motion.div
@@ -245,11 +260,6 @@ export function ServicesScreen() {
             exit={{ opacity: 0, x: -100 }}
             className="px-4 py-4"
           >
-            <div className="flex items-center justify-between mb-4">
-              <Badge variant="secondary" className="font-arabic">
-                {allVendors.length} {totalCount > allVendors.length ? `من ${totalCount}` : ''} مقدم خدمة
-              </Badge>
-            </div>
 
             {isLoading ? (
               <div className="space-y-4">
