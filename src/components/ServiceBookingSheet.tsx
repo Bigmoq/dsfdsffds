@@ -32,11 +32,12 @@ interface ServiceBookingSheetProps {
   };
   packages: ServicePackage[];
   initialDate?: Date;
+  initialPackage?: ServicePackage;
 }
 
-export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initialDate }: ServiceBookingSheetProps) => {
+export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initialDate, initialPackage }: ServiceBookingSheetProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
-  const [selectedPackage, setSelectedPackage] = useState<ServicePackage | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<ServicePackage | null>(initialPackage || null);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
@@ -48,6 +49,13 @@ export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initi
       setSelectedDate(initialDate);
     }
   }, [initialDate]);
+
+  // Update selected package when initialPackage changes
+  useEffect(() => {
+    if (initialPackage) {
+      setSelectedPackage(initialPackage);
+    }
+  }, [initialPackage]);
 
   // Fetch availability for the provider
   const { data: availability } = useQuery({
