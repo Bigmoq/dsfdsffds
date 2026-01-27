@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -15,7 +16,8 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, X, Upload, Loader2, ImageIcon } from "lucide-react";
+import { GripVertical, X, Upload, Loader2, ImageIcon, Maximize2 } from "lucide-react";
+import { ImagePreviewDialog } from "@/components/ImagePreviewDialog";
 
 interface SortableImageItemProps {
   id: string;
@@ -23,9 +25,10 @@ interface SortableImageItemProps {
   index: number;
   onRemove: (index: number) => void;
   onSetAsCover?: (url: string) => void;
+  onPreview: (index: number) => void;
 }
 
-function SortableImageItem({ id, url, index, onRemove, onSetAsCover }: SortableImageItemProps) {
+function SortableImageItem({ id, url, index, onRemove, onSetAsCover, onPreview }: SortableImageItemProps) {
   const {
     attributes,
     listeners,
@@ -52,8 +55,19 @@ function SortableImageItem({ id, url, index, onRemove, onSetAsCover }: SortableI
       <img
         src={url}
         alt=""
-        className="w-full h-full object-cover rounded-lg"
+        className="w-full h-full object-cover rounded-lg cursor-pointer"
+        onClick={() => onPreview(index)}
       />
+      
+      {/* Preview Button */}
+      <button
+        type="button"
+        onClick={() => onPreview(index)}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/60 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+        title="معاينة الصورة"
+      >
+        <Maximize2 className="w-4 h-4" />
+      </button>
       
       {/* Drag Handle */}
       <button
@@ -113,6 +127,9 @@ export function SortableImageList({
   maxImages = 10,
   onSetAsCover,
 }: SortableImageListProps) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -134,6 +151,11 @@ export function SortableImageList({
     }
   };
 
+  const handlePreview = (index: number) => {
+    setPreviewIndex(index);
+    setPreviewOpen(true);
+  };
+
   const imageIds = images.map((_, index) => `image-${index}`);
 
   return (
@@ -153,6 +175,7 @@ export function SortableImageList({
                 index={idx}
                 onRemove={onRemove}
                 onSetAsCover={onSetAsCover}
+                onPreview={handlePreview}
               />
             ))}
             
@@ -183,6 +206,15 @@ export function SortableImageList({
           اسحب الصور لإعادة ترتيبها
         </p>
       )}
+
+      {/* Image Preview Dialog */}
+      <ImagePreviewDialog
+        images={images}
+        currentIndex={previewIndex}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        onIndexChange={setPreviewIndex}
+      />
     </div>
   );
 }
