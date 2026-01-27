@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Building2, ShoppingBag, Package, Plus, ArrowRight, Loader2, BarChart3, CalendarCheck, CalendarDays } from "lucide-react";
+import { Building2, ShoppingBag, Package, Plus, ArrowRight, Loader2, BarChart3, CalendarCheck, CalendarDays, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { HallManagement } from "./HallManagement";
 import { ServiceProviderManagement } from "./ServiceProviderManagement";
 import { DressSellerManagement } from "./DressSellerManagement";
@@ -17,10 +18,28 @@ interface VendorDashboardProps {
 }
 
 export function VendorDashboard({ initialSection }: VendorDashboardProps) {
-  const { user, role } = useAuth();
+  const { user, role, signOut } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "تم تسجيل الخروج",
+        description: "نراك قريباً!",
+      });
+      window.location.href = '/';
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تسجيل الخروج",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     const checkWelcomeStatus = async () => {
@@ -332,6 +351,23 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
           </p>
         </div>
       )}
+
+      {/* Logout Button */}
+      <motion.button
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        onClick={handleLogout}
+        className="w-full bg-destructive/10 rounded-xl p-4 flex items-center justify-between hover:bg-destructive/20 transition-colors mt-6"
+      >
+        <div className="w-5 h-5" />
+        <div className="flex items-center gap-3">
+          <span className="font-arabic text-destructive font-medium">تسجيل الخروج</span>
+          <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+            <LogOut className="w-5 h-5 text-destructive" />
+          </div>
+        </div>
+      </motion.button>
     </div>
   );
 }
