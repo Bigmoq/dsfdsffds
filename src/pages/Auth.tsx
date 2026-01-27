@@ -17,7 +17,7 @@ const nameSchema = z.string().min(2, "الاسم يجب أن يكون حرفين
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [mode, setMode] = useState<"select" | "login" | "signup" | "forgot" | "reset-sent">("select");
+  const [mode, setMode] = useState<"select" | "login" | "signup" | "forgot" | "reset-sent" | "verify-email">("select");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -25,7 +25,8 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({}); 
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -190,9 +191,12 @@ export default function Auth() {
           return;
         }
         
+        // Show email verification screen
+        setRegisteredEmail(email);
+        setMode("verify-email");
         toast({
           title: "تم إنشاء الحساب!",
-          description: "مرحباً بك في زفاف",
+          description: "تم إرسال رابط التفعيل إلى بريدك الإلكتروني",
         });
       }
     } catch (error) {
@@ -245,7 +249,7 @@ export default function Auth() {
   return (
     <>
       <Helmet>
-        <title>{mode === "login" ? "تسجيل الدخول" : mode === "signup" ? "إنشاء حساب" : mode === "forgot" ? "استعادة كلمة المرور" : mode === "reset-sent" ? "تم الإرسال" : "مرحباً"} | زفاف</title>
+        <title>{mode === "login" ? "تسجيل الدخول" : mode === "signup" ? "إنشاء حساب" : mode === "forgot" ? "استعادة كلمة المرور" : mode === "reset-sent" ? "تم الإرسال" : mode === "verify-email" ? "تأكيد البريد" : "مرحباً"} | زفاف</title>
         <meta name="description" content="سجل دخولك أو أنشئ حساب جديد للاستفادة من جميع مميزات زفاف" />
       </Helmet>
       
@@ -280,6 +284,7 @@ export default function Auth() {
               {mode === "signup" && "إنشاء حساب جديد"}
               {mode === "forgot" && "استعادة كلمة المرور"}
               {mode === "reset-sent" && "تم الإرسال"}
+              {mode === "verify-email" && "تأكيد البريد الإلكتروني"}
             </h1>
             <p className="text-white/80 font-arabic text-sm">
               {mode === "select" && "اختر طريقة الدخول المناسبة لك"}
@@ -287,6 +292,7 @@ export default function Auth() {
               {mode === "signup" && "أنشئ حسابك للاستفادة من جميع المميزات"}
               {mode === "forgot" && "أدخل بريدك الإلكتروني لإرسال رابط الاستعادة"}
               {mode === "reset-sent" && "تحقق من بريدك الإلكتروني"}
+              {mode === "verify-email" && "تحقق من بريدك الإلكتروني لتفعيل حسابك"}
             </p>
           </motion.div>
         </div>
@@ -361,6 +367,92 @@ export default function Auth() {
                     className="py-6 text-base font-arabic gold-gradient text-white"
                   >
                     تسجيل الدخول
+                  </Button>
+                </div>
+              </motion.div>
+            ) : mode === "verify-email" ? (
+              <motion.div
+                key="verify-email"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="card-luxe rounded-2xl p-6 text-center space-y-6"
+              >
+                <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+                  <Mail className="w-10 h-10 text-primary" />
+                </div>
+                
+                <div className="space-y-2">
+                  <h2 className="text-xl font-bold font-arabic">تم إرسال رابط التفعيل</h2>
+                  <p className="text-muted-foreground font-arabic text-sm">
+                    تم إرسال رابط تفعيل الحساب إلى:
+                  </p>
+                  <p className="font-semibold text-primary" dir="ltr">{registeredEmail}</p>
+                </div>
+                
+                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-arabic text-muted-foreground">
+                    يرجى فتح بريدك الإلكتروني والضغط على رابط التفعيل لإكمال إنشاء حسابك
+                  </p>
+                  <p className="text-xs font-arabic text-muted-foreground">
+                    إذا لم تجد الرسالة، تحقق من مجلد الرسائل غير المرغوب فيها (Spam)
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const { error } = await supabase.auth.resend({
+                          type: 'signup',
+                          email: registeredEmail,
+                          options: {
+                            emailRedirectTo: `${window.location.origin}/onboarding`,
+                          },
+                        });
+                        if (error) {
+                          toast({
+                            title: "خطأ",
+                            description: error.message,
+                            variant: "destructive",
+                          });
+                        } else {
+                          toast({
+                            title: "تم الإرسال",
+                            description: "تم إعادة إرسال رابط التفعيل بنجاح",
+                          });
+                        }
+                      } catch (err) {
+                        toast({
+                          title: "خطأ",
+                          description: "حدث خطأ غير متوقع",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="w-full py-5 font-arabic"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      "إعادة إرسال رابط التفعيل"
+                    )}
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setMode("login");
+                      resetForm();
+                    }}
+                    className="w-full py-5 font-arabic"
+                  >
+                    العودة لتسجيل الدخول
                   </Button>
                 </div>
               </motion.div>
