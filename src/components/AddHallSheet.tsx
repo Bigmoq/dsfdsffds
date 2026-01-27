@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Upload, Loader2, ImageIcon, Phone } from "lucide-react";
+import { X, Upload, Loader2, ImageIcon, Phone, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +33,27 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [noFeatures, setNoFeatures] = useState(false);
+  
+  const availableFeatures = [
+    "موقف سيارات",
+    "قاعة VIP",
+    "مسبح",
+    "حديقة",
+    "مسرح",
+    "إضاءة متميزة",
+    "نظام صوت متقدم",
+    "شاشات عرض",
+    "غرف تبديل ملابس",
+    "خدمة ضيافة",
+    "بوفيه مفتوح",
+    "كوشة عروس",
+    "تكييف مركزي",
+    "واي فاي مجاني",
+    "خدمة فاليه",
+  ];
   
   const [formData, setFormData] = useState({
     name_ar: "",
@@ -188,6 +210,22 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
     setGalleryImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const toggleFeature = (feature: string) => {
+    if (noFeatures) return;
+    setSelectedFeatures(prev => 
+      prev.includes(feature) 
+        ? prev.filter(f => f !== feature)
+        : [...prev, feature]
+    );
+  };
+
+  const handleNoFeatures = (checked: boolean) => {
+    setNoFeatures(checked);
+    if (checked) {
+      setSelectedFeatures([]);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name_ar: "",
@@ -211,6 +249,8 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
     setGalleryImages([]);
     setLatitude(null);
     setLongitude(null);
+    setSelectedFeatures([]);
+    setNoFeatures(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -239,6 +279,7 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
         price_per_chair_weekend: formData.pricing_type === "per_chair" ? (parseInt(formData.price_per_chair_weekend) || null) : null,
         cover_image: coverImage,
         gallery_images: galleryImages.length > 0 ? galleryImages : null,
+        features: noFeatures ? null : (selectedFeatures.length > 0 ? selectedFeatures : null),
         phone: formData.phone || null,
         whatsapp_enabled: formData.whatsapp_enabled,
         latitude: latitude,
@@ -438,6 +479,55 @@ export function AddHallSheet({ open, onOpenChange, onSuccess }: AddHallSheetProp
               className="text-right font-arabic min-h-[100px]"
               dir="rtl"
             />
+          </div>
+
+          {/* Features Section */}
+          <div className="space-y-3">
+            <Label className="font-arabic font-semibold">المميزات</Label>
+            
+            {/* No Features Option */}
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <Checkbox
+                id="no-features"
+                checked={noFeatures}
+                onCheckedChange={handleNoFeatures}
+              />
+              <Label 
+                htmlFor="no-features" 
+                className="font-arabic text-sm cursor-pointer flex-1"
+              >
+                لا أريد إضافة مميزات
+              </Label>
+            </div>
+            
+            {/* Features Grid */}
+            {!noFeatures && (
+              <div className="grid grid-cols-2 gap-2">
+                {availableFeatures.map((feature) => (
+                  <button
+                    key={feature}
+                    type="button"
+                    onClick={() => toggleFeature(feature)}
+                    className={`p-2.5 rounded-lg border text-sm font-arabic text-right transition-all flex items-center justify-between gap-2 ${
+                      selectedFeatures.includes(feature)
+                        ? "bg-primary/10 border-primary text-primary"
+                        : "bg-card border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <span>{feature}</span>
+                    {selectedFeatures.includes(feature) && (
+                      <Check className="w-4 h-4 flex-shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {selectedFeatures.length > 0 && !noFeatures && (
+              <p className="text-xs text-muted-foreground font-arabic">
+                تم اختيار {selectedFeatures.length} مميزات
+              </p>
+            )}
           </div>
           
           {/* Capacity Section */}
