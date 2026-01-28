@@ -56,10 +56,18 @@ export function DressesScreen() {
   const [isButtonVisible, setIsButtonVisible] = useState(true);
   const lastScrollY = useRef(0);
 
-  // Scroll handler for FAB visibility
+  // Scroll handler for FAB visibility - uses container scroll since PullToRefresh has overflow-y-auto
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  
   useEffect(() => {
+    // Find the PullToRefresh scroll container
+    const container = document.querySelector('.h-full.overflow-y-auto') as HTMLDivElement;
+    scrollContainerRef.current = container;
+    
+    if (!container) return;
+    
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      const currentScrollY = container.scrollTop;
       
       if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
         setIsButtonVisible(false);
@@ -70,8 +78,8 @@ export function DressesScreen() {
       lastScrollY.current = currentScrollY;
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Build query filters
