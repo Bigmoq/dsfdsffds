@@ -56,65 +56,45 @@ export function DressesScreen() {
   const [isButtonVisible, setIsButtonVisible] = useState(true);
   const lastScrollY = useRef(0);
 
-  // Scroll handler for FAB visibility - uses MutationObserver to find container after render
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  // Ref for the content div - used to find the scroll container
+  const contentRef = useRef<HTMLDivElement>(null);
   
+  // Scroll handler for FAB visibility
   useEffect(() => {
-    // Function to find and attach scroll listener
-    const attachScrollListener = (container: HTMLDivElement) => {
-      if (scrollContainerRef.current === container) return; // Already attached
-      
-      scrollContainerRef.current = container;
-      
-      const handleScroll = () => {
-        const currentScrollY = container.scrollTop;
-        
-        if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-          setIsButtonVisible(false);
-        } else {
-          setIsButtonVisible(true);
+    // Find the scrollable parent (PullToRefresh container) by traversing up
+    const findScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
+      if (!element) return null;
+      let parent = element.parentElement;
+      while (parent) {
+        const style = window.getComputedStyle(parent);
+        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+          return parent;
         }
-        
-        lastScrollY.current = currentScrollY;
-      };
-
-      container.addEventListener("scroll", handleScroll, { passive: true });
-      
-      // Return cleanup function
-      return () => container.removeEventListener("scroll", handleScroll);
-    };
-
-    // Try to find container immediately
-    const findContainer = () => {
-      // Look for the closest scrollable parent - the PullToRefresh div
-      const containers = document.querySelectorAll('.overflow-y-auto');
-      for (const el of containers) {
-        // Check if this container contains the dresses screen content
-        if (el.querySelector('.min-h-screen.bg-background.pb-32')) {
-          return el as HTMLDivElement;
-        }
+        parent = parent.parentElement;
       }
       return null;
     };
 
-    let cleanup: (() => void) | undefined;
-    const container = findContainer();
-    
-    if (container) {
-      cleanup = attachScrollListener(container);
-    } else {
-      // If not found, wait for next frame (after render)
-      const frameId = requestAnimationFrame(() => {
-        const delayedContainer = findContainer();
-        if (delayedContainer) {
-          cleanup = attachScrollListener(delayedContainer);
-        }
-      });
-      
-      return () => cancelAnimationFrame(frameId);
+    const container = findScrollableParent(contentRef.current);
+    if (!container) {
+      console.warn('DressesScreen: Could not find scrollable parent');
+      return;
     }
+    
+    const handleScroll = () => {
+      const currentScrollY = container.scrollTop;
+      
+      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+        setIsButtonVisible(false);
+      } else {
+        setIsButtonVisible(true);
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
 
-    return () => cleanup?.();
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Build query filters
@@ -227,7 +207,7 @@ export function DressesScreen() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={isLoading}>
-      <div className="min-h-screen bg-background pb-32">
+      <div ref={contentRef} className="min-h-screen bg-background pb-32">
       {/* Header */}
       <div className="bg-gradient-to-b from-pink-500/10 via-primary/5 to-background pt-12 pb-6 px-4">
         <motion.div
