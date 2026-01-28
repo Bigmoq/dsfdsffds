@@ -48,7 +48,7 @@ export function ChatFAB() {
   return (
     <>
       <motion.button
-        initial={{ scale: 0, opacity: 0 }}
+        initial={{ scale: 1, opacity: 1 }}
         animate={{ 
           scale: isVisible ? 1 : 0, 
           opacity: isVisible ? 1 : 0,
