@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Plus, Search, SlidersHorizontal, Sparkles, Tag, ArrowUpDown, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,26 @@ export function DressesScreen() {
     size: "",
     priceRange: [0, 10000]
   });
+  const [isButtonVisible, setIsButtonVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  // Scroll handler for FAB visibility
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsButtonVisible(false);
+      } else {
+        setIsButtonVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   // Build query filters
   // Note: Using public_dresses view which already filters is_active=true AND is_sold=false
@@ -338,13 +358,18 @@ export function DressesScreen() {
       {/* FAB - Sell Your Dress */}
       <motion.button
         initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
+        animate={{ 
+          scale: isButtonVisible ? 1 : 0, 
+          opacity: isButtonVisible ? 1 : 0,
+          y: isButtonVisible ? 0 : 20
+        }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
+        transition={{ type: "spring", stiffness: 200 }}
         onClick={() => setShowSellSheet(true)}
-        className="fixed bottom-44 left-4 gold-gradient text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center z-40"
+        className="fixed bottom-44 left-4 gold-gradient text-white w-11 h-11 rounded-full shadow-2xl flex items-center justify-center z-40"
       >
-        <Plus className="w-7 h-7" />
+        <Plus className="w-5 h-5" />
       </motion.button>
 
       {/* Dress Details Sheet */}
