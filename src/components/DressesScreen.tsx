@@ -183,203 +183,179 @@ export function DressesScreen() {
   }, [queryClient]);
 
   return (
-    <>
-      <PullToRefresh onRefresh={handleRefresh} disabled={isLoading}>
-        <div className="min-h-screen bg-background pb-32">
-        {/* Header */}
-        <div className="bg-gradient-to-b from-pink-500/10 via-primary/5 to-background pt-12 pb-6 px-4">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-6"
+    <PullToRefresh onRefresh={handleRefresh} disabled={isLoading}>
+      <div className="min-h-screen bg-background pb-32">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-pink-500/10 via-primary/5 to-background pt-12 pb-6 px-4">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-6"
+        >
+          <h1 className="font-display text-2xl font-bold text-foreground mb-1">
+            سوق الفساتين
+          </h1>
+          <p className="text-muted-foreground text-sm font-arabic">
+            اعرضي فستانك أو اعثري على فستان أحلامك
+          </p>
+        </motion.div>
+
+        {/* Search Bar */}
+        <div className="relative max-w-md mx-auto mb-4">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Input
+            placeholder="ابحثي عن فستان..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-10 pl-10 py-5 rounded-xl bg-card border-border/50 text-right"
+          />
+          <button 
+            onClick={() => setShowFilterSheet(true)}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground relative"
           >
-            <h1 className="font-display text-2xl font-bold text-foreground mb-1">
-              سوق الفساتين
-            </h1>
-            <p className="text-muted-foreground text-sm font-arabic">
-              اعرضي فستانك أو اعثري على فستان أحلامك
-            </p>
-          </motion.div>
+            <SlidersHorizontal className="w-5 h-5" />
+            {activeFiltersCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+        </div>
 
-          {/* Search Bar */}
-          <div className="relative max-w-md mx-auto mb-4">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="ابحثي عن فستان..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-10 pl-10 py-5 rounded-xl bg-card border-border/50 text-right"
-            />
-            <button 
-              onClick={() => setShowFilterSheet(true)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground relative"
+        {/* Category Tabs */}
+        <div className="flex justify-center gap-2 mb-4">
+          {categoryTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedCategory(tab.id)}
+              className={`px-3 py-2 rounded-full text-sm font-arabic flex items-center gap-1.5 transition-all ${
+                selectedCategory === tab.id
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "bg-card text-muted-foreground hover:bg-muted"
+              }`}
             >
-              <SlidersHorizontal className="w-5 h-5" />
-              {activeFiltersCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center">
-                  {activeFiltersCount}
-                </span>
-              )}
+              <span className="text-sm">{tab.icon}</span>
+              {tab.label}
             </button>
-          </div>
-
-          {/* Category Tabs */}
-          <div className="flex justify-center gap-2 mb-4">
-            {categoryTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedCategory(tab.id)}
-                className={`px-3 py-2 rounded-full text-sm font-arabic flex items-center gap-1.5 transition-all ${
-                  selectedCategory === tab.id
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "bg-card text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <span className="text-sm">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Condition Tabs */}
-          <div className="flex justify-center gap-2 mb-4">
-            {conditionTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedCondition(tab.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-arabic flex items-center gap-1 transition-all ${
-                  selectedCondition === tab.id
-                    ? "bg-foreground text-background"
-                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                {tab.icon && <tab.icon className="w-3 h-3" />}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Quick City Filter */}
-          <div className="flex gap-2 overflow-x-auto pb-2 px-1 scrollbar-hide">
-            {quickCities.map((city) => (
-              <button
-                key={city}
-                onClick={() => setSelectedCity(city)}
-                className={`px-3 py-1.5 rounded-full text-xs font-arabic whitespace-nowrap transition-all ${
-                  selectedCity === city
-                    ? "bg-foreground text-background"
-                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                {city === "all" ? "كل المدن" : city}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
 
-        {/* Results Count & Sort */}
-        <div className="px-4 py-3 flex items-center justify-between">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowUpDown className="w-4 h-4" />
-              <span className="font-arabic">{sortOptions.find(o => o.id === sortBy)?.label}</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="font-arabic">
-              {sortOptions.map((option) => (
-                <DropdownMenuItem
-                  key={option.id}
-                  onClick={() => setSortBy(option.id)}
-                  className={sortBy === option.id ? "bg-muted" : ""}
-                >
-                  {option.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Badge variant="secondary" className="font-arabic">
-            {filteredDresses.length} {totalCount > filteredDresses.length ? `من ${totalCount}` : ''} فستان
-          </Badge>
+        {/* Condition Tabs */}
+        <div className="flex justify-center gap-2 mb-4">
+          {conditionTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedCondition(tab.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-arabic flex items-center gap-1 transition-all ${
+                selectedCondition === tab.id
+                  ? "bg-foreground text-background"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {tab.icon && <tab.icon className="w-3 h-3" />}
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Dresses Grid */}
-        <div className="px-4">
-          {isLoading ? (
-            <div className="grid grid-cols-2 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <DressCardSkeleton key={i} />
-              ))}
+        {/* Quick City Filter */}
+        <div className="flex gap-2 overflow-x-auto pb-2 px-1 scrollbar-hide">
+          {quickCities.map((city) => (
+            <button
+              key={city}
+              onClick={() => setSelectedCity(city)}
+              className={`px-3 py-1.5 rounded-full text-xs font-arabic whitespace-nowrap transition-all ${
+                selectedCity === city
+                  ? "bg-foreground text-background"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {city === "all" ? "كل المدن" : city}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Results Count & Sort */}
+      <div className="px-4 py-3 flex items-center justify-between">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowUpDown className="w-4 h-4" />
+            <span className="font-arabic">{sortOptions.find(o => o.id === sortBy)?.label}</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="font-arabic">
+            {sortOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.id}
+                onClick={() => setSortBy(option.id)}
+                className={sortBy === option.id ? "bg-muted" : ""}
+              >
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Badge variant="secondary" className="font-arabic">
+          {filteredDresses.length} {totalCount > filteredDresses.length ? `من ${totalCount}` : ''} فستان
+        </Badge>
+      </div>
+
+      {/* Dresses Grid */}
+      <div className="px-4">
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <DressCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : filteredDresses.length > 0 ? (
+          <>
+            <motion.div 
+              className="grid grid-cols-2 gap-4"
+              layout
+            >
+              <AnimatePresence mode="popLayout">
+                {filteredDresses.map((dress) => (
+                  <motion.div
+                    key={dress.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <DressCard
+                      dress={dress as any}
+                      onClick={() => handleDressClick(dress)}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+            
+            {/* Infinite Scroll Trigger */}
+            <InfiniteScrollTrigger
+              loadMoreRef={loadMoreRef}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+            />
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+              <Search className="w-8 h-8 text-muted-foreground" />
             </div>
-          ) : filteredDresses.length > 0 ? (
-            <>
-              <motion.div 
-                className="grid grid-cols-2 gap-4"
-                layout
-              >
-                <AnimatePresence mode="popLayout">
-                  {filteredDresses.map((dress) => (
-                    <motion.div
-                      key={dress.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <DressCard
-                        dress={dress as any}
-                        onClick={() => handleDressClick(dress)}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-              
-              {/* Infinite Scroll Trigger */}
-              <InfiniteScrollTrigger
-                loadMoreRef={loadMoreRef}
-                hasNextPage={hasNextPage}
-                isFetchingNextPage={isFetchingNextPage}
-              />
-            </>
-          ) : (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-                <Search className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground font-arabic mb-2">
-                لا توجد نتائج للبحث
-              </p>
-              <p className="text-sm text-muted-foreground/70 font-arabic">
-                جربي تغيير معايير البحث
-              </p>
-            </div>
-          )}
-        </div>
+            <p className="text-muted-foreground font-arabic mb-2">
+              لا توجد نتائج للبحث
+            </p>
+            <p className="text-sm text-muted-foreground/70 font-arabic">
+              جربي تغيير معايير البحث
+            </p>
+          </div>
+        )}
+      </div>
 
-        {/* Dress Details Sheet */}
-        <DressDetailsSheet
-          dress={selectedDress}
-          open={showDetails}
-          onClose={() => setShowDetails(false)}
-        />
-
-        {/* Sell Dress Sheet */}
-        <SellDressSheet
-          open={showSellSheet}
-          onClose={() => setShowSellSheet(false)}
-        />
-
-        {/* Filter Sheet */}
-        <DressFilterSheet
-          open={showFilterSheet}
-          onClose={() => setShowFilterSheet(false)}
-          filters={filters}
-          onApplyFilters={setFilters}
-        />
-        </div>
-      </PullToRefresh>
-
-      {/* FAB - Sell Your Dress - OUTSIDE PullToRefresh for proper fixed positioning */}
+      {/* FAB - Sell Your Dress */}
       <motion.button
         initial={{ scale: 1, opacity: 1 }}
         animate={{ 
@@ -391,10 +367,32 @@ export function DressesScreen() {
         whileTap={{ scale: 0.95 }}
         transition={{ type: "spring", stiffness: 200 }}
         onClick={() => setShowSellSheet(true)}
-        className="fixed bottom-28 left-4 gold-gradient text-white w-11 h-11 rounded-full shadow-2xl flex items-center justify-center z-40"
+        className="fixed bottom-44 left-4 gold-gradient text-white w-11 h-11 rounded-full shadow-2xl flex items-center justify-center z-40"
       >
         <Plus className="w-5 h-5" />
       </motion.button>
-    </>
+
+      {/* Dress Details Sheet */}
+      <DressDetailsSheet
+        dress={selectedDress}
+        open={showDetails}
+        onClose={() => setShowDetails(false)}
+      />
+
+      {/* Sell Dress Sheet */}
+      <SellDressSheet
+        open={showSellSheet}
+        onClose={() => setShowSellSheet(false)}
+      />
+
+      {/* Filter Sheet */}
+      <DressFilterSheet
+        open={showFilterSheet}
+        onClose={() => setShowFilterSheet(false)}
+        filters={filters}
+        onApplyFilters={setFilters}
+      />
+      </div>
+    </PullToRefresh>
   );
 }
