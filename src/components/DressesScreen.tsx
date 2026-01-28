@@ -357,7 +357,7 @@ export function DressesScreen() {
 
       {/* FAB - Sell Your Dress */}
       <motion.button
-        initial={{ scale: 0 }}
+        initial={{ scale: 1, opacity: 1 }}
         animate={{ 
           scale: isButtonVisible ? 1 : 0, 
           opacity: isButtonVisible ? 1 : 0,
