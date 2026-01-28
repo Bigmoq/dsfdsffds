@@ -56,30 +56,65 @@ export function DressesScreen() {
   const [isButtonVisible, setIsButtonVisible] = useState(true);
   const lastScrollY = useRef(0);
 
-  // Scroll handler for FAB visibility - uses container scroll since PullToRefresh has overflow-y-auto
+  // Scroll handler for FAB visibility - uses MutationObserver to find container after render
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
   useEffect(() => {
-    // Find the PullToRefresh scroll container
-    const container = document.querySelector('.h-full.overflow-y-auto') as HTMLDivElement;
-    scrollContainerRef.current = container;
-    
-    if (!container) return;
-    
-    const handleScroll = () => {
-      const currentScrollY = container.scrollTop;
+    // Function to find and attach scroll listener
+    const attachScrollListener = (container: HTMLDivElement) => {
+      if (scrollContainerRef.current === container) return; // Already attached
       
-      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-        setIsButtonVisible(false);
-      } else {
-        setIsButtonVisible(true);
-      }
+      scrollContainerRef.current = container;
       
-      lastScrollY.current = currentScrollY;
+      const handleScroll = () => {
+        const currentScrollY = container.scrollTop;
+        
+        if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+          setIsButtonVisible(false);
+        } else {
+          setIsButtonVisible(true);
+        }
+        
+        lastScrollY.current = currentScrollY;
+      };
+
+      container.addEventListener("scroll", handleScroll, { passive: true });
+      
+      // Return cleanup function
+      return () => container.removeEventListener("scroll", handleScroll);
     };
 
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    return () => container.removeEventListener("scroll", handleScroll);
+    // Try to find container immediately
+    const findContainer = () => {
+      // Look for the closest scrollable parent - the PullToRefresh div
+      const containers = document.querySelectorAll('.overflow-y-auto');
+      for (const el of containers) {
+        // Check if this container contains the dresses screen content
+        if (el.querySelector('.min-h-screen.bg-background.pb-32')) {
+          return el as HTMLDivElement;
+        }
+      }
+      return null;
+    };
+
+    let cleanup: (() => void) | undefined;
+    const container = findContainer();
+    
+    if (container) {
+      cleanup = attachScrollListener(container);
+    } else {
+      // If not found, wait for next frame (after render)
+      const frameId = requestAnimationFrame(() => {
+        const delayedContainer = findContainer();
+        if (delayedContainer) {
+          cleanup = attachScrollListener(delayedContainer);
+        }
+      });
+      
+      return () => cancelAnimationFrame(frameId);
+    }
+
+    return () => cleanup?.();
   }, []);
 
   // Build query filters
