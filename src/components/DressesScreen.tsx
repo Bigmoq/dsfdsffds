@@ -342,7 +342,7 @@ export function DressesScreen() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setShowSellSheet(true)}
-        className="fixed bottom-28 left-4 gold-gradient text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center z-40"
+        className="fixed bottom-44 left-4 gold-gradient text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center z-40"
       >
         <Plus className="w-7 h-7" />
       </motion.button>
