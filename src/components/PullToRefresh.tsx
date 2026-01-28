@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, ReactNode } from "react";
+import { useState, useRef, useCallback, ReactNode, forwardRef, useImperativeHandle } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { Loader2, ArrowDown } from "lucide-react";
 
@@ -23,13 +23,17 @@ const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'medium') => {
   }
 };
 
-export function PullToRefresh({ children, onRefresh, disabled = false }: PullToRefreshProps) {
+export const PullToRefresh = forwardRef<HTMLDivElement, PullToRefreshProps>(
+  ({ children, onRefresh, disabled = false }, ref) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
   const [hasTriggeredHaptic, setHasTriggeredHaptic] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const currentY = useRef(0);
+  
+  // Expose the container ref to parent components
+  useImperativeHandle(ref, () => containerRef.current as HTMLDivElement);
   
   const pullDistance = useMotionValue(0);
   const pullProgress = useTransform(pullDistance, [0, PULL_THRESHOLD], [0, 1]);
@@ -149,4 +153,6 @@ export function PullToRefresh({ children, onRefresh, disabled = false }: PullToR
       </motion.div>
     </div>
   );
-}
+});
+
+PullToRefresh.displayName = 'PullToRefresh';
