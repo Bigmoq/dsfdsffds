@@ -43,6 +43,7 @@ export function VendorReviews({ providerId, providerName }: VendorReviewsProps) 
   const [showAddReview, setShowAddReview] = useState(false);
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+  const [canReview, setCanReview] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -83,9 +84,40 @@ export function VendorReviews({ providerId, providerName }: VendorReviewsProps) 
     }
   };
 
+  // Check if user has a confirmed/completed booking for this provider
+  const checkCanReview = async () => {
+    if (!user) {
+      setCanReview(false);
+      return;
+    }
+
+    try {
+      const { data: bookings } = await supabase
+        .from("service_bookings")
+        .select("id")
+        .eq("provider_id", providerId)
+        .eq("user_id", user.id)
+        .in("status", ["confirmed", "completed"])
+        .limit(1);
+
+      setCanReview(!!bookings && bookings.length > 0);
+    } catch (error) {
+      console.error("Error checking can review:", error);
+      setCanReview(false);
+    }
+  };
+
   useEffect(() => {
     fetchReviews();
   }, [providerId]);
+
+  useEffect(() => {
+    if (user) {
+      checkCanReview();
+    } else {
+      setCanReview(false);
+    }
+  }, [providerId, user]);
 
   const userReview = reviews.find(r => r.user_id === user?.id);
 
@@ -133,20 +165,24 @@ export function VendorReviews({ providerId, providerName }: VendorReviewsProps) 
   return (
     <div className="text-right">
       <div className="flex items-center justify-between mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            if (userReview) {
-              setEditingReview(userReview);
-            }
-            setShowAddReview(true);
-          }}
-          disabled={!user}
-        >
-          <MessageSquare className="w-4 h-4 ml-1" />
-          {userReview ? "تعديل تقييمي" : "أضف تقييم"}
-        </Button>
+        {/* Only show add review button if user has a confirmed/completed booking */}
+        {user && canReview && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (userReview) {
+                setEditingReview(userReview);
+              }
+              setShowAddReview(true);
+            }}
+          >
+            <MessageSquare className="w-4 h-4 ml-1" />
+            {userReview ? "تعديل تقييمي" : "أضف تقييم"}
+          </Button>
+        )}
+        {/* Show empty div to keep flex layout when button is hidden */}
+        {(!user || !canReview) && <div />}
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-foreground font-arabic">التقييمات والمراجعات</h3>
           <Star className="w-5 h-5 text-primary" />
@@ -340,10 +376,15 @@ export function VendorReviews({ providerId, providerName }: VendorReviewsProps) 
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Login prompt */}
+      {/* Info message for users */}
       {!user && (
         <p className="text-center text-sm text-muted-foreground mt-4 font-arabic">
           سجل دخولك لإضافة تقييم
+        </p>
+      )}
+      {user && !canReview && !userReview && (
+        <p className="text-center text-sm text-muted-foreground mt-4 font-arabic">
+          يمكنك التقييم بعد اكتمال حجزك مع مقدم الخدمة
         </p>
       )}
     </div>
