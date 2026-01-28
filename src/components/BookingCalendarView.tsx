@@ -309,12 +309,13 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
   const handleDateClick = (date: Date) => {
     const dateBookings = getBookingsForDate(date);
     const isPast = isBefore(date, today);
+    const blocked = isDateBlocked(date);
     
     if (dateBookings.length > 0) {
       setSelectedDate(date);
       setSheetOpen(true);
-    } else if (!isPast) {
-      // Show action sheet for empty dates
+    } else if (!isPast || blocked) {
+      // Show action sheet for empty dates (including blocked dates even if past)
       setSelectedEmptyDate(date);
       setDateActionSheetOpen(true);
     }
@@ -355,16 +356,15 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
             .from("hall_availability")
             .delete()
             .eq("hall_id", entityId)
-            .eq("date", dateStr)
-            .eq("status", "unavailable");
+            .eq("date", dateStr);
         } else {
-          // Set as unavailable
+          // Set as unavailable - using any to bypass TypeScript until types are regenerated
           await supabase.from("hall_availability").upsert({
             hall_id: entityId,
             date: dateStr,
-            status: "unavailable" as const,
+            status: "unavailable" as "available" | "booked" | "resale",
             notes: "محجوب يدوياً",
-          }, { onConflict: "hall_id,date" });
+          } as never, { onConflict: "hall_id,date" });
         }
       } else {
         if (currentlyBlocked) {
@@ -373,8 +373,7 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
             .from("service_provider_availability")
             .delete()
             .eq("provider_id", entityId)
-            .eq("date", dateStr)
-            .eq("status", "unavailable");
+            .eq("date", dateStr);
         } else {
           // Set as unavailable
           await supabase.from("service_provider_availability").upsert({
@@ -781,6 +780,10 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
           <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />
           <span>ملغي</span>
         </div>
+        <div className="flex items-center gap-1">
+          <Lock className="w-2.5 h-2.5 text-red-500" />
+          <span>محجوب</span>
+        </div>
       </div>
 
       {/* Calendar Grid */}
@@ -809,6 +812,7 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
               const hasBookings = dateBookings.length > 0;
               const firstBooking = dateBookings[0];
               const isPast = isBefore(day, today);
+              const isBlocked = isDateBlocked(day);
               
               // Get first booking details
               const customerName = firstBooking?.profiles?.full_name;
@@ -823,13 +827,14 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.003 }}
                   onClick={() => handleDateClick(day)}
-                  disabled={isPast && !hasBookings}
+                  disabled={isPast && !hasBookings && !isBlocked}
                   className={cn(
                     "min-h-[70px] rounded-lg flex flex-col items-stretch p-1 relative transition-all text-right",
                     isToday(day) && "ring-2 ring-primary",
                     hasBookings && "cursor-pointer hover:shadow-md",
-                    !hasBookings && !isPast && "cursor-pointer hover:bg-primary/10 bg-muted/30 hover:ring-1 hover:ring-primary/50",
-                    !hasBookings && isPast && "cursor-default bg-muted/30",
+                    isBlocked && !hasBookings && "cursor-pointer bg-red-100 dark:bg-red-950/30 hover:bg-red-200 dark:hover:bg-red-950/50",
+                    !hasBookings && !isPast && !isBlocked && "cursor-pointer hover:bg-primary/10 bg-muted/30 hover:ring-1 hover:ring-primary/50",
+                    !hasBookings && isPast && !isBlocked && "cursor-default bg-muted/30",
                     hasBookings && !isPast && "bg-muted/50",
                     isPast && "opacity-50"
                   )}
@@ -840,7 +845,8 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
                       className={cn(
                         "text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full",
                         isToday(day) && "bg-primary text-primary-foreground font-bold",
-                        !isToday(day) && "text-foreground"
+                        isBlocked && !isToday(day) && "text-red-600",
+                        !isToday(day) && !isBlocked && "text-foreground"
                       )}
                     >
                       {format(day, "d")}
@@ -891,6 +897,11 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
                           {notes}
                         </p>
                       )}
+                    </div>
+                  ) : isBlocked ? (
+                    <div className="flex-1 flex flex-col items-center justify-center">
+                      <Lock className="w-4 h-4 text-red-500" />
+                      <span className="text-[7px] text-red-600 mt-0.5">محجوب</span>
                     </div>
                   ) : !isPast && (
                     <div className="flex-1 flex items-center justify-center">
@@ -1432,6 +1443,89 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Date Action Sheet */}
+      <Sheet open={dateActionSheetOpen} onOpenChange={setDateActionSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl">
+          <SheetHeader className="text-right">
+            <SheetTitle className="flex items-center justify-end gap-2">
+              <span>
+                {selectedEmptyDate && format(selectedEmptyDate, "EEEE، d MMMM yyyy", { locale: ar })}
+              </span>
+              <CalendarDays className="w-5 h-5 text-primary" />
+            </SheetTitle>
+            <SheetDescription className="text-right">
+              اختر الإجراء المطلوب لهذا التاريخ
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-3">
+            {/* Add Booking Button */}
+            <Button
+              className="w-full h-14 justify-start gap-3"
+              onClick={handleAddBookingFromSheet}
+            >
+              <div className="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+                <Plus className="w-5 h-5" />
+              </div>
+              <div className="text-right">
+                <div className="font-bold">إضافة حجز</div>
+                <div className="text-xs opacity-80">إضافة حجز خارجي لهذا التاريخ</div>
+              </div>
+            </Button>
+
+            {/* Toggle Availability Button */}
+            <Button
+              variant={selectedEmptyDate && isDateBlocked(selectedEmptyDate) ? "default" : "outline"}
+              className={cn(
+                "w-full h-14 justify-start gap-3",
+                selectedEmptyDate && isDateBlocked(selectedEmptyDate) 
+                  ? "bg-green-600 hover:bg-green-700" 
+                  : "border-red-200 hover:bg-red-50"
+              )}
+              onClick={handleToggleAvailability}
+              disabled={availabilityLoading}
+            >
+              <div className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center",
+                selectedEmptyDate && isDateBlocked(selectedEmptyDate) 
+                  ? "bg-white/20" 
+                  : "bg-red-100"
+              )}>
+                {availabilityLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : selectedEmptyDate && isDateBlocked(selectedEmptyDate) ? (
+                  <Unlock className="w-5 h-5" />
+                ) : (
+                  <Lock className="w-5 h-5 text-red-600" />
+                )}
+              </div>
+              <div className="text-right">
+                <div className={cn(
+                  "font-bold",
+                  selectedEmptyDate && isDateBlocked(selectedEmptyDate) 
+                    ? "text-white" 
+                    : "text-red-600"
+                )}>
+                  {selectedEmptyDate && isDateBlocked(selectedEmptyDate) 
+                    ? "إتاحة الموعد" 
+                    : "حجب الموعد"}
+                </div>
+                <div className={cn(
+                  "text-xs",
+                  selectedEmptyDate && isDateBlocked(selectedEmptyDate) 
+                    ? "text-white/80" 
+                    : "text-muted-foreground"
+                )}>
+                  {selectedEmptyDate && isDateBlocked(selectedEmptyDate)
+                    ? "إظهار هذا التاريخ للعملاء كموعد متاح"
+                    : "إخفاء هذا التاريخ من العملاء"}
+                </div>
+              </div>
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

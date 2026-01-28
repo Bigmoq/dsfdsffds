@@ -40,12 +40,14 @@ const statusColors: Record<AvailabilityStatus, string> = {
   available: "bg-available",
   booked: "bg-booked",
   resale: "bg-resale",
+  unavailable: "bg-gray-500",
 };
 
 const statusLabels: Record<AvailabilityStatus, string> = {
   available: "متاح",
   booked: "محجوز",
   resale: "إعادة بيع",
+  unavailable: "غير متاح",
 };
 
 const bookingStatusColors: Record<BookingStatus, string> = {
