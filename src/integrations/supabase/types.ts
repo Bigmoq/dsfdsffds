@@ -1364,7 +1364,7 @@ export type Database = {
         | "service_provider"
         | "dress_seller"
         | "admin"
-      availability_status: "available" | "booked" | "resale"
+      availability_status: "available" | "booked" | "resale" | "unavailable"
       booking_status: "pending" | "accepted" | "rejected" | "cancelled"
       service_availability_status: "available" | "booked" | "unavailable"
       vendor_role: "hall_owner" | "service_provider" | "dress_seller"
@@ -1503,7 +1503,7 @@ export const Constants = {
         "dress_seller",
         "admin",
       ],
-      availability_status: ["available", "booked", "resale"],
+      availability_status: ["available", "booked", "resale", "unavailable"],
       booking_status: ["pending", "accepted", "rejected", "cancelled"],
       service_availability_status: ["available", "booked", "unavailable"],
       vendor_role: ["hall_owner", "service_provider", "dress_seller"],
