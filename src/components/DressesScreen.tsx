@@ -56,59 +56,24 @@ export function DressesScreen() {
   const [isButtonVisible, setIsButtonVisible] = useState(true);
   const lastScrollY = useRef(0);
 
-  // Ref for the content div - used to find the scroll container
-  const contentRef = useRef<HTMLDivElement>(null);
-  
-  // Scroll handler for FAB visibility
+  // Scroll handler for FAB visibility - uses window scroll since that's what happens in the current layout
   useEffect(() => {
-    // Find the scrollable parent (PullToRefresh container) by traversing up
-    const findScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
-      if (!element) return null;
-      let parent = element.parentElement;
-      while (parent) {
-        const style = window.getComputedStyle(parent);
-        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-          return parent;
-        }
-        parent = parent.parentElement;
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+        setIsButtonVisible(false);
+      } else {
+        setIsButtonVisible(true);
       }
-      return null;
+      
+      lastScrollY.current = currentScrollY;
     };
 
-    // Use setTimeout to ensure DOM is fully ready after render
-    const timeoutId = setTimeout(() => {
-      const container = findScrollableParent(contentRef.current);
-      if (!container) {
-        console.warn('DressesScreen: Could not find scrollable parent');
-        return;
-      }
-      
-      const handleScroll = () => {
-        const currentScrollY = container.scrollTop;
-        
-        if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-          setIsButtonVisible(false);
-        } else {
-          setIsButtonVisible(true);
-        }
-        
-        lastScrollY.current = currentScrollY;
-      };
-
-      container.addEventListener("scroll", handleScroll, { passive: true });
-      
-      // Store cleanup function
-      (window as any).__dressesScreenScrollCleanup = () => {
-        container.removeEventListener("scroll", handleScroll);
-      };
-    }, 100);
-
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    
     return () => {
-      clearTimeout(timeoutId);
-      if ((window as any).__dressesScreenScrollCleanup) {
-        (window as any).__dressesScreenScrollCleanup();
-        delete (window as any).__dressesScreenScrollCleanup;
-      }
+      window.removeEventListener("scroll", handleScroll);
     };
   }, []);
 
@@ -223,7 +188,7 @@ export function DressesScreen() {
   return (
     <>
       <PullToRefresh onRefresh={handleRefresh} disabled={isLoading}>
-        <div ref={contentRef} className="min-h-screen bg-background pb-32">
+        <div className="min-h-screen bg-background pb-32">
         {/* Header */}
         <div className="bg-gradient-to-b from-pink-500/10 via-primary/5 to-background pt-12 pb-6 px-4">
           <motion.div
