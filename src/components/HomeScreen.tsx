@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Search, SlidersHorizontal, MapPin, X, Navigation, Loader2 } from "lucide-react";
-import { cities } from "@/data/weddingData";
 import { HallCard } from "./HallCard";
 import { HallDetailsSheet } from "./HallDetailsSheet";
 import { HallFilterSheet, HallFilters, defaultFilters } from "./HallFilterSheet";
@@ -12,6 +11,7 @@ import { useGeolocation, calculateDistance } from "@/hooks/useGeolocation";
 import { HallCardSkeleton } from "@/components/skeletons";
 import { PullToRefresh } from "./PullToRefresh";
 import { useQueryClient } from "@tanstack/react-query";
+import { useDynamicCities } from "@/hooks/useDynamicCities";
 
 const PAGE_SIZE = 15;
 
@@ -27,6 +27,9 @@ export function HomeScreen() {
   // Get user's geolocation
   const { latitude: userLat, longitude: userLon, loading: geoLoading, requestLocation } = useGeolocation();
   
+  // Fetch dynamic cities from database
+  const { data: dynamicCities = [], isLoading: citiesLoading } = useDynamicCities('public_halls');
+  
   // Query client for refresh
   const queryClient = useQueryClient();
 
@@ -35,13 +38,10 @@ export function HomeScreen() {
   const queryFilters = useMemo(() => {
     const f: Record<string, any> = {};
     
-    // City filter
+    // City filter - use direct Arabic city name
     const cityFilter = selectedCity !== "all" ? selectedCity : filters.city;
-    if (cityFilter !== "all") {
-      const cityData = cities.find(c => c.id === cityFilter);
-      if (cityData) {
-        f.city = cityData.nameAr;
-      }
+    if (cityFilter && cityFilter !== "all") {
+      f.city = cityFilter;
     }
     
     return f;
@@ -234,20 +234,38 @@ export function HomeScreen() {
             <span className="font-arabic text-sm">الأقرب</span>
           </button>
 
-          {cities.map((city) => (
-            <button
-              key={city.id}
-              onClick={() => handleCityTabClick(city.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300 ${
-                selectedCity === city.id
-                  ? "gold-gradient text-white shadow-lg"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              <span className="font-arabic text-sm">{city.nameAr}</span>
-              {city.id !== "all" && <MapPin className="w-4 h-4" />}
-            </button>
-          ))}
+          {/* All cities button */}
+          <button
+            onClick={() => handleCityTabClick("all")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300 ${
+              selectedCity === "all"
+                ? "gold-gradient text-white shadow-lg"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            <span className="font-arabic text-sm">كل المدن</span>
+          </button>
+
+          {citiesLoading ? (
+            <div className="flex items-center px-4">
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            dynamicCities.map((city) => (
+              <button
+                key={city}
+                onClick={() => handleCityTabClick(city)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300 ${
+                  selectedCity === city
+                    ? "gold-gradient text-white shadow-lg"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                <span className="font-arabic text-sm">{city}</span>
+                <MapPin className="w-4 h-4" />
+              </button>
+            ))
+          )}
         </div>
       </div>
       
