@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { 
-  Calendar, Users, Check, X, Clock, ChevronDown, Building2, Phone, 
+  Calendar, Users, Check, X, Clock, ChevronDown, Building2, 
   MessageCircle, Loader2, RefreshCw, Ban, DollarSign, Tag, Percent,
   RotateCcw, CheckCircle2
 } from "lucide-react";
@@ -198,10 +198,6 @@ export function HallBookingManagement({ refreshKey }: HallBookingManagementProps
     window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${message}`, '_blank');
   };
 
-  const handleCall = (phone: string | null) => {
-    if (!phone) return;
-    window.open(`tel:${phone}`, '_self');
-  };
 
   const getStatusBadge = (status: BookingStatus | null) => {
     switch (status) {
@@ -366,21 +362,9 @@ export function HallBookingManagement({ refreshKey }: HallBookingManagementProps
                           <Users className="w-4 h-4" />
                         </div>
                         
-                        {/* Contact Buttons */}
+                        {/* Contact Button */}
                         {booking.profiles?.phone && (
                           <div className="flex gap-2 pt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCall(booking.profiles?.phone || null);
-                              }}
-                            >
-                              <Phone className="w-4 h-4 ml-1" />
-                              اتصال
-                            </Button>
                             <Button
                               size="sm"
                               className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white"

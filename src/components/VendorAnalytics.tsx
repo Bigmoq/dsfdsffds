@@ -14,7 +14,6 @@ import {
   ArrowDown,
   Loader2,
   PieChart as PieChartIcon,
-  Phone,
   User,
   CreditCard,
   Clock,
@@ -210,9 +209,6 @@ export function VendorAnalytics() {
     window.open(`https://wa.me/${formattedPhone}`, "_blank");
   };
 
-  const handleCall = (phone: string) => {
-    window.open(`tel:${phone}`, "_self");
-  };
 
   const handleUpdateStatus = async (bookingId: string, newStatus: string) => {
     if (!role) return;
@@ -1120,14 +1116,6 @@ export function VendorAnalytics() {
                 
                 {selectedBooking.customer_phone && (
                   <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 gap-2"
-                      onClick={() => handleCall(selectedBooking.customer_phone!)}
-                    >
-                      <Phone className="w-4 h-4" />
-                      اتصال
-                    </Button>
                     <Button 
                       className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
                       onClick={() => handleWhatsApp(selectedBooking.customer_phone!)}

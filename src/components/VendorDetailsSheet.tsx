@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  X, Star, MapPin, MessageCircle, Phone, ChevronRight, ChevronLeft,
+  X, Star, MapPin, MessageCircle, ChevronRight, ChevronLeft,
   Calendar, Package, Clock, CheckCircle, XCircle, AlertCircle, CalendarPlus
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -148,10 +148,6 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
     setChatOpen(true);
   };
 
-  const handleCall = () => {
-    const phone = vendor?.phone || '966500000000';
-    window.open(`tel:${phone}`, '_self');
-  };
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
@@ -458,16 +454,8 @@ export function VendorDetailsSheet({ open, onOpenChange, vendor }: VendorDetails
               </Button>
             )}
 
-            {/* Contact Buttons */}
+            {/* Contact Button */}
             <div className="flex gap-3 pt-2 pb-8">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={handleCall}
-              >
-                <Phone className="w-4 h-4 ml-2" />
-                اتصال
-              </Button>
               <Button
                 className="flex-1"
                 onClick={handleChatClick}
