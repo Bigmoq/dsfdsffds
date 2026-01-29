@@ -122,14 +122,6 @@ const contactMethods = [
     buttonText: "أرسل رسالة",
     color: "bg-blue-500"
   },
-  {
-    icon: Phone,
-    title: "الهاتف",
-    description: "من 9 صباحاً - 9 مساءً",
-    action: "tel:+966500000000",
-    buttonText: "اتصل الآن",
-    color: "bg-primary"
-  }
 ];
 
 export function HelpSheet({ open, onOpenChange }: HelpSheetProps) {

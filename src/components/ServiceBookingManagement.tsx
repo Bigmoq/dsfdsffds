@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { 
   CalendarDays, User, Package, Clock, CheckCircle, XCircle, 
-  Loader2, MessageCircle, Phone, FileText, ChevronDown, RefreshCw,
+  Loader2, MessageCircle, FileText, ChevronDown, RefreshCw,
   Ban, RotateCcw, CheckCircle2, Tag, Percent
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -234,10 +234,6 @@ export function ServiceBookingManagement() {
     window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${message}`, '_blank');
   };
 
-  const handleCall = (phone: string | null | undefined) => {
-    if (!phone) return;
-    window.open(`tel:${phone}`, '_self');
-  };
 
   const BookingCard = ({ booking }: { booking: BookingWithProfile }) => {
     const isExpanded = expandedBooking === booking.id;
@@ -285,18 +281,9 @@ export function ServiceBookingManagement() {
                 )}
               </div>
 
-              {/* Contact Buttons */}
+              {/* Contact Button */}
               {booking.userProfile?.phone && (
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleCall(booking.userProfile?.phone)}
-                  >
-                    <Phone className="w-4 h-4 ml-1" />
-                    اتصال
-                  </Button>
                   <Button
                     size="sm"
                     className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white"

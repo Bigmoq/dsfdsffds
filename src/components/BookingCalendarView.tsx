@@ -8,7 +8,7 @@ import {
 import { ar } from "date-fns/locale";
 import { 
   ChevronLeft, ChevronRight, CalendarDays, User, Users, Package, 
-  Loader2, Phone, MessageCircle, Clock, CreditCard, Check, X, 
+  Loader2, MessageCircle, Clock, CreditCard, Check, X, 
   Ban, Tag, RotateCcw, CheckCircle2, Edit, DollarSign, AlertCircle, Plus,
   Trash2, ExternalLink, Lock, Unlock, CalendarOff
 } from "lucide-react";
@@ -682,10 +682,6 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
     window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${message}`, "_blank");
   };
 
-  const handleCall = (phone: string | null) => {
-    if (!phone) return;
-    window.open(`tel:${phone}`, "_self");
-  };
 
   const firstDayOffset = startOfMonth(currentMonth).getDay();
   const weekDays = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
@@ -1049,15 +1045,6 @@ export function BookingCalendarView({ type }: BookingCalendarViewProps) {
 
                 {selectedBooking.profiles?.phone && (
                   <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleCall(selectedBooking.profiles?.phone || null)}
-                    >
-                      <Phone className="w-4 h-4 ml-1" />
-                      اتصال
-                    </Button>
                     <Button
                       size="sm"
                       className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white"
