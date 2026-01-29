@@ -44,7 +44,7 @@ export function ServicesScreen() {
     return f;
   }, [selectedCategory, filters.city]);
 
-  // Fetch service providers with pagination
+  // Fetch service providers with pagination including min package price
   const {
     data: dbProviders,
     fetchNextPage,
@@ -58,7 +58,7 @@ export function ServicesScreen() {
     pageSize: PAGE_SIZE,
     orderBy: { column: 'rating', ascending: false },
     filters: queryFilters,
-    select: '*',
+    select: '*, service_packages(price)',
     enabled: !!selectedCategory,
   });
 
@@ -88,6 +88,11 @@ export function ServicesScreen() {
   // Process and filter vendors
   const allVendors = useMemo(() => {
     const normalizedDbProviders = dbProviders.map(p => {
+      // Calculate min price from packages
+      const packages = p.service_packages || [];
+      const prices = packages.map((pkg: any) => pkg.price).filter((price: number) => price > 0);
+      const minPrice = prices.length > 0 ? Math.min(...prices) : null;
+      
       return {
         id: p.id,
         name: p.name_en || p.name_ar,
@@ -95,17 +100,18 @@ export function ServicesScreen() {
         categoryId: p.category_id,
         rating: Number(p.rating) || 0,
         reviews: p.reviews_count || 0,
-        price: 'اتصل للسعر',
-        minPrice: null,
+        price: minPrice ? `${minPrice.toLocaleString()} ر.س` : 'اتصل للسعر',
+        minPrice: minPrice,
         image: p.portfolio_images?.[0] || '/placeholder.svg',
         portfolio_images: p.portfolio_images,
         description: p.description || '',
         descriptionAr: p.description || '',
         city: p.city,
         phone: p.phone,
-        packagesCount: 0,
+        packagesCount: packages.length,
         isAvailableToday: false,
         isFromDb: true,
+        owner_id: p.owner_id,
       };
     });
 
