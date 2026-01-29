@@ -14,6 +14,7 @@ import { format, startOfToday } from "date-fns";
 import { VendorCardSkeleton } from "@/components/skeletons";
 import { PullToRefresh } from "./PullToRefresh";
 import { useQueryClient } from "@tanstack/react-query";
+import { useDynamicCities } from "@/hooks/useDynamicCities";
 
 type Tab = "women" | "men";
 
@@ -76,11 +77,13 @@ export function ServicesScreen() {
     );
   }, [categories, searchQuery]);
 
-  // Get unique cities for filter
+  // Fetch dynamic cities for the selected category
+  const { data: dynamicCities = [] } = useDynamicCities('public_service_providers');
+  
+  // Get unique cities for filter (use dynamic cities from database)
   const availableCities = useMemo(() => {
-    const cities = new Set(dbProviders.map(p => p.city).filter(Boolean));
-    return Array.from(cities) as string[];
-  }, [dbProviders]);
+    return dynamicCities;
+  }, [dynamicCities]);
 
   // Process and filter vendors
   const allVendors = useMemo(() => {

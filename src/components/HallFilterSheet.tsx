@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { cities } from "@/data/weddingData";
-import { MapPin, Users, Banknote, CalendarCheck, RotateCcw } from "lucide-react";
+import { useDynamicCities } from "@/hooks/useDynamicCities";
+import { MapPin, Users, Banknote, CalendarCheck, RotateCcw, Loader2 } from "lucide-react";
 
 export interface HallFilters {
   city: string;
@@ -33,6 +33,12 @@ const defaultFilters: HallFilters = {
 
 export function HallFilterSheet({ open, onOpenChange, filters, onApplyFilters }: HallFilterSheetProps) {
   const [localFilters, setLocalFilters] = useState<HallFilters>(filters);
+  const { data: dynamicCities = [], isLoading: citiesLoading } = useDynamicCities('public_halls');
+
+  // Sync local filters when prop changes
+  useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
 
   const handleApply = () => {
     onApplyFilters(localFilters);
@@ -57,21 +63,41 @@ export function HallFilterSheet({ open, onOpenChange, filters, onApplyFilters }:
               <Label className="font-arabic text-base font-semibold">المدينة</Label>
               <MapPin className="w-4 h-4 text-primary" />
             </div>
-            <div className="flex flex-wrap gap-2 justify-end">
-              {cities.map((city) => (
+            {citiesLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 justify-end">
+                {/* All cities option */}
                 <button
-                  key={city.id}
-                  onClick={() => setLocalFilters({ ...localFilters, city: city.id })}
+                  onClick={() => setLocalFilters({ ...localFilters, city: "all" })}
                   className={`px-4 py-2 rounded-full text-sm font-arabic transition-all ${
-                    localFilters.city === city.id
+                    localFilters.city === "all"
                       ? "gold-gradient text-white shadow-md"
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
                   }`}
                 >
-                  {city.nameAr}
+                  كل المدن
                 </button>
-              ))}
-            </div>
+                {dynamicCities.map((city) => (
+                  <button
+                    key={city}
+                    onClick={() => setLocalFilters({ ...localFilters, city })}
+                    className={`px-4 py-2 rounded-full text-sm font-arabic transition-all ${
+                      localFilters.city === city
+                        ? "gold-gradient text-white shadow-md"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {city}
+                  </button>
+                ))}
+                {dynamicCities.length === 0 && (
+                  <p className="text-sm text-muted-foreground font-arabic">لا توجد مدن متاحة حالياً</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Capacity Filter */}
