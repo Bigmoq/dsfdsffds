@@ -183,7 +183,16 @@ export function ProfileEditSheet({ open, onOpenChange }: ProfileEditSheetProps) 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-md p-0 overflow-y-auto">
         <SheetHeader className="p-4 border-b sticky top-0 bg-background z-10">
-          <SheetTitle className="text-right font-display">الملف الشخصي</SheetTitle>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => onOpenChange(false)}
+              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span>→</span>
+              <span>رجوع</span>
+            </button>
+            <SheetTitle className="font-display">الملف الشخصي</SheetTitle>
+          </div>
         </SheetHeader>
 
         {isLoading ? (

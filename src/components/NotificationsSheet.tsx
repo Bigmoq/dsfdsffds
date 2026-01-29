@@ -227,30 +227,37 @@ export function NotificationsSheet({ open: controlledOpen, onOpenChange, showTri
       <SheetContent side="right" className="w-full sm:max-w-md p-0">
         <SheetHeader className="p-4 border-b">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => markAllAsReadMutation.mutate()}
-                  disabled={markAllAsReadMutation.isPending}
-                >
-                  {markAllAsReadMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4 ml-1" />
-                      قراءة الكل
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+            <button
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span>→</span>
+              <span>رجوع</span>
+            </button>
             <SheetTitle className="flex items-center gap-2">
               الإشعارات
               <Bell className="w-5 h-5" />
             </SheetTitle>
           </div>
+          {unreadCount > 0 && (
+            <div className="flex justify-start pt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => markAllAsReadMutation.mutate()}
+                disabled={markAllAsReadMutation.isPending}
+              >
+                {markAllAsReadMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 ml-1" />
+                    قراءة الكل
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-80px)]">
