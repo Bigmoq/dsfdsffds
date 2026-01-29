@@ -1331,6 +1331,10 @@ export type Database = {
       }
     }
     Functions: {
+      assign_initial_user_role: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       get_hall_rating: {
         Args: { hall_uuid: string }
         Returns: {

@@ -143,13 +143,10 @@ export default function Onboarding() {
     setLoading(true);
     
     try {
-      // Insert user role
+      // Use secure server-side function to assign initial 'user' role
+      // This prevents privilege escalation by only allowing 'user' role assignment
       const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: user.id,
-          role: selectedRole,
-        });
+        .rpc('assign_initial_user_role', { p_user_id: user.id });
       
       if (roleError) throw roleError;
       
@@ -161,11 +158,13 @@ export default function Onboarding() {
       
       if (profileError) throw profileError;
       
+      // For vendor roles, users must apply through the vendor application process
+      // which requires admin approval - this is handled in VendorApplicationSheet
       toast({
         title: "مرحباً بك!",
         description: selectedRole === "user" 
           ? "استمتع بتصفح أفضل قاعات الأفراح"
-          : "تم تسجيلك كمقدم خدمة بنجاح",
+          : "تم إنشاء حسابك بنجاح. لتصبح مقدم خدمة، يرجى تقديم طلب من صفحة الملف الشخصي",
       });
       
       redirectBasedOnRole(selectedRole);
