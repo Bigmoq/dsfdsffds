@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.22b37f64f7ba4316bcf3951e42d6cd16',
+  appId: 'com.wedding.zafaf',
   appName: 'زفاف',
   webDir: 'dist',
   // server: {
