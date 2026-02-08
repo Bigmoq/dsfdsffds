@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import { useEffect, useState } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,6 +27,29 @@ const queryClient = new QueryClient({
   },
 });
 
+// Component to redirect first-time visitors to welcome page
+const FirstVisitRedirect = () => {
+  const location = useLocation();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+
+  useEffect(() => {
+    // Only check on root path
+    if (location.pathname === '/') {
+      const hasVisited = localStorage.getItem('hasVisitedApp');
+      if (!hasVisited) {
+        localStorage.setItem('hasVisitedApp', 'true');
+        setShouldRedirect(true);
+      }
+    }
+  }, [location.pathname]);
+
+  if (shouldRedirect && location.pathname === '/') {
+    return <Navigate to="/welcome" replace />;
+  }
+
+  return null;
+};
+
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
@@ -33,6 +57,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <FirstVisitRedirect />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/welcome" element={<Welcome />} />
