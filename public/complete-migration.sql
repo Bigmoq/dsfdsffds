@@ -2,25 +2,49 @@
 -- ملف الهجرة الكامل لمشروع زفاف
 -- Complete Migration File for Zafaf Project
 -- تاريخ التصدير: 2026-02-09
+-- ✅ Idempotent - آمن للتنفيذ المتكرر
 -- =============================================
 
 -- =============================================
--- الجزء 1: الأنواع (ENUMS)
+-- الجزء 1: الأنواع (ENUMS) - Idempotent
 -- =============================================
 
-CREATE TYPE public.app_role AS ENUM ('user', 'hall_owner', 'service_provider', 'dress_seller', 'admin');
-CREATE TYPE public.availability_status AS ENUM ('available', 'booked', 'resale', 'unavailable');
-CREATE TYPE public.booking_status AS ENUM ('pending', 'accepted', 'rejected', 'cancelled');
-CREATE TYPE public.service_availability_status AS ENUM ('available', 'booked', 'unavailable');
-CREATE TYPE public.vendor_role AS ENUM ('hall_owner', 'service_provider', 'dress_seller');
-CREATE TYPE public.vendor_status AS ENUM ('pending', 'approved', 'rejected');
+DO $$ BEGIN
+    CREATE TYPE public.app_role AS ENUM ('user', 'hall_owner', 'service_provider', 'dress_seller', 'admin');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE public.availability_status AS ENUM ('available', 'booked', 'resale', 'unavailable');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE public.booking_status AS ENUM ('pending', 'accepted', 'rejected', 'cancelled');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE public.service_availability_status AS ENUM ('available', 'booked', 'unavailable');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE public.vendor_role AS ENUM ('hall_owner', 'service_provider', 'dress_seller');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE public.vendor_status AS ENUM ('pending', 'approved', 'rejected');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
 -- =============================================
--- الجزء 2: الجداول الأساسية
+-- الجزء 2: الجداول الأساسية - IF NOT EXISTS
 -- =============================================
 
 -- جدول الملفات الشخصية
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name TEXT,
     phone TEXT,
@@ -33,7 +57,7 @@ CREATE TABLE public.profiles (
 );
 
 -- جدول الأدوار
-CREATE TABLE public.user_roles (
+CREATE TABLE IF NOT EXISTS public.user_roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     role app_role NOT NULL DEFAULT 'user',
@@ -42,7 +66,7 @@ CREATE TABLE public.user_roles (
 );
 
 -- جدول القاعات
-CREATE TABLE public.halls (
+CREATE TABLE IF NOT EXISTS public.halls (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     name_ar TEXT NOT NULL,
@@ -72,7 +96,7 @@ CREATE TABLE public.halls (
 );
 
 -- جدول توفر القاعات
-CREATE TABLE public.hall_availability (
+CREATE TABLE IF NOT EXISTS public.hall_availability (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hall_id UUID REFERENCES public.halls(id) ON DELETE CASCADE NOT NULL,
     date DATE NOT NULL,
@@ -83,7 +107,7 @@ CREATE TABLE public.hall_availability (
 );
 
 -- جدول حجوزات القاعات
-CREATE TABLE public.hall_bookings (
+CREATE TABLE IF NOT EXISTS public.hall_bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hall_id UUID REFERENCES public.halls(id) ON DELETE CASCADE NOT NULL,
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -99,7 +123,7 @@ CREATE TABLE public.hall_bookings (
 );
 
 -- جدول تقييمات القاعات
-CREATE TABLE public.hall_reviews (
+CREATE TABLE IF NOT EXISTS public.hall_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hall_id UUID REFERENCES public.halls(id) ON DELETE CASCADE NOT NULL,
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -111,7 +135,7 @@ CREATE TABLE public.hall_reviews (
 );
 
 -- جدول مقدمي الخدمات
-CREATE TABLE public.service_providers (
+CREATE TABLE IF NOT EXISTS public.service_providers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     category_id TEXT NOT NULL,
@@ -131,7 +155,7 @@ CREATE TABLE public.service_providers (
 );
 
 -- جدول باقات الخدمات
-CREATE TABLE public.service_packages (
+CREATE TABLE IF NOT EXISTS public.service_packages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     provider_id UUID REFERENCES public.service_providers(id) ON DELETE CASCADE NOT NULL,
     name_ar TEXT NOT NULL,
@@ -142,7 +166,7 @@ CREATE TABLE public.service_packages (
 );
 
 -- جدول توفر مقدمي الخدمات
-CREATE TABLE public.service_provider_availability (
+CREATE TABLE IF NOT EXISTS public.service_provider_availability (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     provider_id UUID REFERENCES public.service_providers(id) ON DELETE CASCADE NOT NULL,
     date DATE NOT NULL,
@@ -153,7 +177,7 @@ CREATE TABLE public.service_provider_availability (
 );
 
 -- جدول حجوزات الخدمات
-CREATE TABLE public.service_bookings (
+CREATE TABLE IF NOT EXISTS public.service_bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     provider_id UUID REFERENCES public.service_providers(id) ON DELETE CASCADE NOT NULL,
     package_id UUID REFERENCES public.service_packages(id) ON DELETE SET NULL,
@@ -167,7 +191,7 @@ CREATE TABLE public.service_bookings (
 );
 
 -- جدول تقييمات مقدمي الخدمات
-CREATE TABLE public.service_provider_reviews (
+CREATE TABLE IF NOT EXISTS public.service_provider_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     provider_id UUID REFERENCES public.service_providers(id) ON DELETE CASCADE NOT NULL,
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -178,7 +202,7 @@ CREATE TABLE public.service_provider_reviews (
 );
 
 -- جدول الفساتين
-CREATE TABLE public.dresses (
+CREATE TABLE IF NOT EXISTS public.dresses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     seller_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     title TEXT NOT NULL,
@@ -197,7 +221,7 @@ CREATE TABLE public.dresses (
 );
 
 -- جدول المفضلات (القاعات)
-CREATE TABLE public.favorites (
+CREATE TABLE IF NOT EXISTS public.favorites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     hall_id UUID REFERENCES public.halls(id) ON DELETE CASCADE NOT NULL,
@@ -206,7 +230,7 @@ CREATE TABLE public.favorites (
 );
 
 -- جدول مفضلات الخدمات
-CREATE TABLE public.service_favorites (
+CREATE TABLE IF NOT EXISTS public.service_favorites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     provider_id UUID REFERENCES public.service_providers(id) ON DELETE CASCADE NOT NULL,
@@ -215,7 +239,7 @@ CREATE TABLE public.service_favorites (
 );
 
 -- جدول مفضلات الفساتين
-CREATE TABLE public.dress_favorites (
+CREATE TABLE IF NOT EXISTS public.dress_favorites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     dress_id UUID REFERENCES public.dresses(id) ON DELETE CASCADE NOT NULL,
@@ -224,7 +248,7 @@ CREATE TABLE public.dress_favorites (
 );
 
 -- جدول طلبات البائعين
-CREATE TABLE public.vendor_applications (
+CREATE TABLE IF NOT EXISTS public.vendor_applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     role vendor_role NOT NULL,
@@ -237,7 +261,7 @@ CREATE TABLE public.vendor_applications (
 );
 
 -- جدول الإشعارات
-CREATE TABLE public.notifications (
+CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     title TEXT NOT NULL,
@@ -250,7 +274,7 @@ CREATE TABLE public.notifications (
 );
 
 -- جدول الشكاوى
-CREATE TABLE public.complaints (
+CREATE TABLE IF NOT EXISTS public.complaints (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     subject TEXT NOT NULL,
@@ -266,7 +290,7 @@ CREATE TABLE public.complaints (
 );
 
 -- جدول الإعلانات
-CREATE TABLE public.advertisements (
+CREATE TABLE IF NOT EXISTS public.advertisements (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     image_url TEXT NOT NULL,
@@ -281,7 +305,7 @@ CREATE TABLE public.advertisements (
 );
 
 -- جدول المحادثات
-CREATE TABLE public.conversations (
+CREATE TABLE IF NOT EXISTS public.conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     participant_1 UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     participant_2 UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -293,7 +317,7 @@ CREATE TABLE public.conversations (
 );
 
 -- جدول الرسائل
-CREATE TABLE public.chat_messages (
+CREATE TABLE IF NOT EXISTS public.chat_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE NOT NULL,
     sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -304,7 +328,7 @@ CREATE TABLE public.chat_messages (
 );
 
 -- جدول التحليلات
-CREATE TABLE public.analytics_events (
+CREATE TABLE IF NOT EXISTS public.analytics_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     event_name TEXT NOT NULL,
@@ -317,7 +341,7 @@ CREATE TABLE public.analytics_events (
 );
 
 -- =============================================
--- الجزء 3: الدوال (FUNCTIONS)
+-- الجزء 3: الدوال (FUNCTIONS) - CREATE OR REPLACE
 -- =============================================
 
 -- دالة التحقق من الدور
@@ -364,11 +388,6 @@ BEGIN
   RETURN new;
 END;
 $$;
-
--- Trigger لإنشاء الملف الشخصي تلقائياً
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- دالة تحديث وقت التعديل
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
@@ -447,10 +466,6 @@ BEGIN
 END;
 $$;
 
-CREATE TRIGGER update_service_provider_rating
-  AFTER INSERT OR UPDATE OR DELETE ON public.service_provider_reviews
-  FOR EACH ROW EXECUTE FUNCTION public.update_provider_rating();
-
 -- دالة تحديث وقت المحادثة
 CREATE OR REPLACE FUNCTION public.update_conversation_timestamp()
 RETURNS TRIGGER
@@ -466,12 +481,59 @@ BEGIN
 END;
 $$;
 
+-- دالة تعيين الدور الأولي للمستخدم
+CREATE OR REPLACE FUNCTION public.assign_initial_user_role(p_user_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  existing_role_count integer;
+BEGIN
+  IF auth.uid() IS NULL OR auth.uid() != p_user_id THEN
+    RAISE EXCEPTION 'Unauthorized: Cannot assign role for another user';
+  END IF;
+  
+  SELECT COUNT(*) INTO existing_role_count
+  FROM public.user_roles
+  WHERE user_id = p_user_id;
+  
+  IF existing_role_count > 0 THEN
+    RETURN true;
+  END IF;
+  
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES (p_user_id, 'user');
+  
+  RETURN true;
+END;
+$$;
+
+-- =============================================
+-- الجزء 4: الـ Triggers - DROP IF EXISTS ثم CREATE
+-- =============================================
+
+-- Trigger لإنشاء الملف الشخصي تلقائياً
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Trigger لتحديث تقييم مقدم الخدمة
+DROP TRIGGER IF EXISTS update_service_provider_rating ON public.service_provider_reviews;
+CREATE TRIGGER update_service_provider_rating
+  AFTER INSERT OR UPDATE OR DELETE ON public.service_provider_reviews
+  FOR EACH ROW EXECUTE FUNCTION public.update_provider_rating();
+
+-- Trigger لتحديث وقت المحادثة
+DROP TRIGGER IF EXISTS update_conversation_on_message ON public.chat_messages;
 CREATE TRIGGER update_conversation_on_message
   AFTER INSERT ON public.chat_messages
   FOR EACH ROW EXECUTE FUNCTION public.update_conversation_timestamp();
 
 -- =============================================
--- الجزء 4: سياسات أمان الصفوف (RLS)
+-- الجزء 5: تفعيل RLS وسياسات الأمان
 -- =============================================
 
 -- تفعيل RLS على جميع الجداول
@@ -498,143 +560,341 @@ ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analytics_events ENABLE ROW LEVEL SECURITY;
 
--- سياسات profiles
+-- =============================================
+-- سياسات profiles - DROP IF EXISTS ثم CREATE
+-- =============================================
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can update all profiles" ON public.profiles;
 CREATE POLICY "Admins can update all profiles" ON public.profiles FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can delete profiles" ON public.profiles;
 CREATE POLICY "Admins can delete profiles" ON public.profiles FOR DELETE USING (has_role(auth.uid(), 'admin'));
 
+-- =============================================
 -- سياسات user_roles
+-- =============================================
+DROP POLICY IF EXISTS "Users can view own roles" ON public.user_roles;
 CREATE POLICY "Users can view own roles" ON public.user_roles FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can view all user_roles" ON public.user_roles;
 CREATE POLICY "Admins can view all user_roles" ON public.user_roles FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can insert user_roles" ON public.user_roles;
 CREATE POLICY "Admins can insert user_roles" ON public.user_roles FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can update all user_roles" ON public.user_roles;
 CREATE POLICY "Admins can update all user_roles" ON public.user_roles FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can delete user_roles" ON public.user_roles;
 CREATE POLICY "Admins can delete user_roles" ON public.user_roles FOR DELETE USING (has_role(auth.uid(), 'admin'));
 
+-- =============================================
 -- سياسات halls
+-- =============================================
+DROP POLICY IF EXISTS "Active halls are viewable by everyone" ON public.halls;
 CREATE POLICY "Active halls are viewable by everyone" ON public.halls FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Owners can manage own halls" ON public.halls;
 CREATE POLICY "Owners can manage own halls" ON public.halls FOR ALL USING (auth.uid() = owner_id);
+
+DROP POLICY IF EXISTS "Admins can view all halls" ON public.halls;
 CREATE POLICY "Admins can view all halls" ON public.halls FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can update all halls" ON public.halls;
 CREATE POLICY "Admins can update all halls" ON public.halls FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can delete halls" ON public.halls;
 CREATE POLICY "Admins can delete halls" ON public.halls FOR DELETE USING (has_role(auth.uid(), 'admin'));
 
+-- =============================================
 -- سياسات hall_availability
+-- =============================================
+DROP POLICY IF EXISTS "Hall availability is public" ON public.hall_availability;
 CREATE POLICY "Hall availability is public" ON public.hall_availability FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Owners can manage hall availability" ON public.hall_availability;
 CREATE POLICY "Owners can manage hall availability" ON public.hall_availability FOR ALL USING (EXISTS (SELECT 1 FROM halls WHERE halls.id = hall_availability.hall_id AND halls.owner_id = auth.uid()));
 
+-- =============================================
 -- سياسات hall_bookings
+-- =============================================
+DROP POLICY IF EXISTS "Users can view own bookings" ON public.hall_bookings;
 CREATE POLICY "Users can view own bookings" ON public.hall_bookings FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create bookings" ON public.hall_bookings;
 CREATE POLICY "Users can create bookings" ON public.hall_bookings FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own hall bookings" ON public.hall_bookings;
 CREATE POLICY "Users can update own hall bookings" ON public.hall_bookings FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Hall owners can view their bookings" ON public.hall_bookings;
 CREATE POLICY "Hall owners can view their bookings" ON public.hall_bookings FOR SELECT USING (EXISTS (SELECT 1 FROM halls WHERE halls.id = hall_bookings.hall_id AND halls.owner_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Hall owners can update bookings" ON public.hall_bookings;
 CREATE POLICY "Hall owners can update bookings" ON public.hall_bookings FOR UPDATE USING (EXISTS (SELECT 1 FROM halls WHERE halls.id = hall_bookings.hall_id AND halls.owner_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Admins can view all hall_bookings" ON public.hall_bookings;
 CREATE POLICY "Admins can view all hall_bookings" ON public.hall_bookings FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can update all hall_bookings" ON public.hall_bookings;
 CREATE POLICY "Admins can update all hall_bookings" ON public.hall_bookings FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can delete hall_bookings" ON public.hall_bookings;
 CREATE POLICY "Admins can delete hall_bookings" ON public.hall_bookings FOR DELETE USING (has_role(auth.uid(), 'admin'));
 
+-- =============================================
 -- سياسات hall_reviews
+-- =============================================
+DROP POLICY IF EXISTS "Reviews are viewable by everyone" ON public.hall_reviews;
 CREATE POLICY "Reviews are viewable by everyone" ON public.hall_reviews FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can create reviews for booked halls" ON public.hall_reviews;
 CREATE POLICY "Users can create reviews for booked halls" ON public.hall_reviews FOR INSERT WITH CHECK (auth.uid() = user_id AND EXISTS (SELECT 1 FROM hall_bookings WHERE hall_bookings.hall_id = hall_reviews.hall_id AND hall_bookings.user_id = auth.uid() AND hall_bookings.status = 'accepted'));
+
+DROP POLICY IF EXISTS "Users can update own reviews" ON public.hall_reviews;
 CREATE POLICY "Users can update own reviews" ON public.hall_reviews FOR UPDATE USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own reviews" ON public.hall_reviews;
 CREATE POLICY "Users can delete own reviews" ON public.hall_reviews FOR DELETE USING (auth.uid() = user_id);
 
+-- =============================================
 -- سياسات service_providers
+-- =============================================
+DROP POLICY IF EXISTS "Service providers are viewable by everyone" ON public.service_providers;
 CREATE POLICY "Service providers are viewable by everyone" ON public.service_providers FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Owners can manage own services" ON public.service_providers;
 CREATE POLICY "Owners can manage own services" ON public.service_providers FOR ALL USING (auth.uid() = owner_id);
+
+DROP POLICY IF EXISTS "Admins can view all service_providers" ON public.service_providers;
 CREATE POLICY "Admins can view all service_providers" ON public.service_providers FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can update all service_providers" ON public.service_providers;
 CREATE POLICY "Admins can update all service_providers" ON public.service_providers FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can delete service_providers" ON public.service_providers;
 CREATE POLICY "Admins can delete service_providers" ON public.service_providers FOR DELETE USING (has_role(auth.uid(), 'admin'));
 
+-- =============================================
 -- سياسات service_packages
+-- =============================================
+DROP POLICY IF EXISTS "Packages are viewable by everyone" ON public.service_packages;
 CREATE POLICY "Packages are viewable by everyone" ON public.service_packages FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Owners can manage own packages" ON public.service_packages;
 CREATE POLICY "Owners can manage own packages" ON public.service_packages FOR ALL USING (EXISTS (SELECT 1 FROM service_providers WHERE service_providers.id = service_packages.provider_id AND service_providers.owner_id = auth.uid()));
 
+-- =============================================
 -- سياسات service_provider_availability
+-- =============================================
+DROP POLICY IF EXISTS "Availability is viewable by everyone" ON public.service_provider_availability;
 CREATE POLICY "Availability is viewable by everyone" ON public.service_provider_availability FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Owners can manage availability" ON public.service_provider_availability;
 CREATE POLICY "Owners can manage availability" ON public.service_provider_availability FOR ALL USING (EXISTS (SELECT 1 FROM service_providers WHERE service_providers.id = service_provider_availability.provider_id AND service_providers.owner_id = auth.uid()));
 
+-- =============================================
 -- سياسات service_bookings
+-- =============================================
+DROP POLICY IF EXISTS "Users can view own service bookings" ON public.service_bookings;
 CREATE POLICY "Users can view own service bookings" ON public.service_bookings FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create service bookings" ON public.service_bookings;
 CREATE POLICY "Users can create service bookings" ON public.service_bookings FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own service bookings" ON public.service_bookings;
 CREATE POLICY "Users can update own service bookings" ON public.service_bookings FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Providers can view their service bookings" ON public.service_bookings;
 CREATE POLICY "Providers can view their service bookings" ON public.service_bookings FOR SELECT USING (EXISTS (SELECT 1 FROM service_providers WHERE service_providers.id = service_bookings.provider_id AND service_providers.owner_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Providers can update service bookings" ON public.service_bookings;
 CREATE POLICY "Providers can update service bookings" ON public.service_bookings FOR UPDATE USING (EXISTS (SELECT 1 FROM service_providers WHERE service_providers.id = service_bookings.provider_id AND service_providers.owner_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Admins can view all service_bookings" ON public.service_bookings;
 CREATE POLICY "Admins can view all service_bookings" ON public.service_bookings FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can update all service_bookings" ON public.service_bookings;
 CREATE POLICY "Admins can update all service_bookings" ON public.service_bookings FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can delete service_bookings" ON public.service_bookings;
 CREATE POLICY "Admins can delete service_bookings" ON public.service_bookings FOR DELETE USING (has_role(auth.uid(), 'admin'));
 
+-- =============================================
 -- سياسات service_provider_reviews
+-- =============================================
+DROP POLICY IF EXISTS "Service reviews are viewable by everyone" ON public.service_provider_reviews;
 CREATE POLICY "Service reviews are viewable by everyone" ON public.service_provider_reviews FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can create reviews for booked services" ON public.service_provider_reviews;
 CREATE POLICY "Users can create reviews for booked services" ON public.service_provider_reviews FOR INSERT WITH CHECK (auth.uid() = user_id AND EXISTS (SELECT 1 FROM service_bookings WHERE service_bookings.provider_id = service_provider_reviews.provider_id AND service_bookings.user_id = auth.uid() AND service_bookings.status IN ('confirmed', 'completed')));
+
+DROP POLICY IF EXISTS "Users can update own service reviews" ON public.service_provider_reviews;
 CREATE POLICY "Users can update own service reviews" ON public.service_provider_reviews FOR UPDATE USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own service reviews" ON public.service_provider_reviews;
 CREATE POLICY "Users can delete own service reviews" ON public.service_provider_reviews FOR DELETE USING (auth.uid() = user_id);
 
+-- =============================================
 -- سياسات dresses
+-- =============================================
+DROP POLICY IF EXISTS "Active dresses are viewable by everyone" ON public.dresses;
 CREATE POLICY "Active dresses are viewable by everyone" ON public.dresses FOR SELECT USING (is_active = true AND is_sold = false);
+
+DROP POLICY IF EXISTS "Sellers can manage own dresses" ON public.dresses;
 CREATE POLICY "Sellers can manage own dresses" ON public.dresses FOR ALL USING (auth.uid() = seller_id);
+
+DROP POLICY IF EXISTS "Sellers can view own dresses" ON public.dresses;
 CREATE POLICY "Sellers can view own dresses" ON public.dresses FOR SELECT USING (auth.uid() = seller_id);
+
+DROP POLICY IF EXISTS "Admins can view all dresses" ON public.dresses;
 CREATE POLICY "Admins can view all dresses" ON public.dresses FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can update all dresses" ON public.dresses;
 CREATE POLICY "Admins can update all dresses" ON public.dresses FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can delete dresses" ON public.dresses;
 CREATE POLICY "Admins can delete dresses" ON public.dresses FOR DELETE USING (has_role(auth.uid(), 'admin'));
 
+-- =============================================
 -- سياسات favorites
+-- =============================================
+DROP POLICY IF EXISTS "Users can view own favorites" ON public.favorites;
 CREATE POLICY "Users can view own favorites" ON public.favorites FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create own favorites" ON public.favorites;
 CREATE POLICY "Users can create own favorites" ON public.favorites FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own favorites" ON public.favorites;
 CREATE POLICY "Users can delete own favorites" ON public.favorites FOR DELETE USING (auth.uid() = user_id);
 
+-- =============================================
 -- سياسات service_favorites
+-- =============================================
+DROP POLICY IF EXISTS "Users can view own service favorites" ON public.service_favorites;
 CREATE POLICY "Users can view own service favorites" ON public.service_favorites FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create own service favorites" ON public.service_favorites;
 CREATE POLICY "Users can create own service favorites" ON public.service_favorites FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own service favorites" ON public.service_favorites;
 CREATE POLICY "Users can delete own service favorites" ON public.service_favorites FOR DELETE USING (auth.uid() = user_id);
 
+-- =============================================
 -- سياسات dress_favorites
+-- =============================================
+DROP POLICY IF EXISTS "Users can view own dress favorites" ON public.dress_favorites;
 CREATE POLICY "Users can view own dress favorites" ON public.dress_favorites FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create own dress favorites" ON public.dress_favorites;
 CREATE POLICY "Users can create own dress favorites" ON public.dress_favorites FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own dress favorites" ON public.dress_favorites;
 CREATE POLICY "Users can delete own dress favorites" ON public.dress_favorites FOR DELETE USING (auth.uid() = user_id);
 
+-- =============================================
 -- سياسات vendor_applications
+-- =============================================
+DROP POLICY IF EXISTS "Users can view own applications" ON public.vendor_applications;
 CREATE POLICY "Users can view own applications" ON public.vendor_applications FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create own applications" ON public.vendor_applications;
 CREATE POLICY "Users can create own applications" ON public.vendor_applications FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can view all applications" ON public.vendor_applications;
 CREATE POLICY "Admins can view all applications" ON public.vendor_applications FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can update applications" ON public.vendor_applications;
 CREATE POLICY "Admins can update applications" ON public.vendor_applications FOR UPDATE USING (has_role(auth.uid(), 'admin'));
 
+-- =============================================
 -- سياسات notifications
+-- =============================================
+DROP POLICY IF EXISTS "Users can view own notifications" ON public.notifications;
 CREATE POLICY "Users can view own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own notifications" ON public.notifications;
 CREATE POLICY "Users can insert own notifications" ON public.notifications FOR INSERT WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
 CREATE POLICY "Users can update own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
 
+-- =============================================
 -- سياسات complaints
+-- =============================================
+DROP POLICY IF EXISTS "Users can view own complaints" ON public.complaints;
 CREATE POLICY "Users can view own complaints" ON public.complaints FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create complaints" ON public.complaints;
 CREATE POLICY "Users can create complaints" ON public.complaints FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can view all complaints" ON public.complaints;
 CREATE POLICY "Admins can view all complaints" ON public.complaints FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can update complaints" ON public.complaints;
 CREATE POLICY "Admins can update complaints" ON public.complaints FOR UPDATE USING (has_role(auth.uid(), 'admin'));
 
+-- =============================================
 -- سياسات advertisements
+-- =============================================
+DROP POLICY IF EXISTS "Active ads are viewable by everyone" ON public.advertisements;
 CREATE POLICY "Active ads are viewable by everyone" ON public.advertisements FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Admins can manage advertisements" ON public.advertisements;
 CREATE POLICY "Admins can manage advertisements" ON public.advertisements FOR ALL USING (has_role(auth.uid(), 'admin'));
 
+-- =============================================
 -- سياسات conversations
+-- =============================================
+DROP POLICY IF EXISTS "Users can view their conversations" ON public.conversations;
 CREATE POLICY "Users can view their conversations" ON public.conversations FOR SELECT USING (auth.uid() = participant_1 OR auth.uid() = participant_2);
+
+DROP POLICY IF EXISTS "Users can create conversations" ON public.conversations;
 CREATE POLICY "Users can create conversations" ON public.conversations FOR INSERT WITH CHECK (auth.uid() = participant_1 OR auth.uid() = participant_2);
+
+DROP POLICY IF EXISTS "Users can update their conversations" ON public.conversations;
 CREATE POLICY "Users can update their conversations" ON public.conversations FOR UPDATE USING (auth.uid() = participant_1 OR auth.uid() = participant_2);
 
+-- =============================================
 -- سياسات chat_messages
+-- =============================================
+DROP POLICY IF EXISTS "Users can view messages in their conversations" ON public.chat_messages;
 CREATE POLICY "Users can view messages in their conversations" ON public.chat_messages FOR SELECT USING (EXISTS (SELECT 1 FROM conversations c WHERE c.id = chat_messages.conversation_id AND (c.participant_1 = auth.uid() OR c.participant_2 = auth.uid())));
+
+DROP POLICY IF EXISTS "Users can send messages in their conversations" ON public.chat_messages;
 CREATE POLICY "Users can send messages in their conversations" ON public.chat_messages FOR INSERT WITH CHECK (auth.uid() = sender_id AND EXISTS (SELECT 1 FROM conversations c WHERE c.id = chat_messages.conversation_id AND (c.participant_1 = auth.uid() OR c.participant_2 = auth.uid())));
+
+DROP POLICY IF EXISTS "Users can update their own messages" ON public.chat_messages;
 CREATE POLICY "Users can update their own messages" ON public.chat_messages FOR UPDATE USING (EXISTS (SELECT 1 FROM conversations c WHERE c.id = chat_messages.conversation_id AND (c.participant_1 = auth.uid() OR c.participant_2 = auth.uid())));
 
+-- =============================================
 -- سياسات analytics_events
+-- =============================================
+DROP POLICY IF EXISTS "Authenticated users can insert analytics events" ON public.analytics_events;
 CREATE POLICY "Authenticated users can insert analytics events" ON public.analytics_events FOR INSERT WITH CHECK (user_id IS NULL OR user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Admins can view all analytics" ON public.analytics_events;
 CREATE POLICY "Admins can view all analytics" ON public.analytics_events FOR SELECT USING (has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "Admins can delete analytics" ON public.analytics_events;
 CREATE POLICY "Admins can delete analytics" ON public.analytics_events FOR DELETE USING (has_role(auth.uid(), 'admin'));
 
 -- =============================================
--- الجزء 5: Views العامة
+-- الجزء 6: Views العامة - CREATE OR REPLACE
 -- =============================================
 
-CREATE OR REPLACE VIEW public.public_halls AS
+CREATE OR REPLACE VIEW public.public_halls WITH (security_invoker=on) AS
 SELECT id, owner_id, name_ar, name_en, description, city, address,
        price_weekday, price_weekend, pricing_type, price_per_chair_weekday, price_per_chair_weekend,
        capacity_men, capacity_women, min_capacity_men, min_capacity_women,
@@ -643,21 +903,21 @@ SELECT id, owner_id, name_ar, name_en, description, city, address,
 FROM public.halls
 WHERE is_active = true;
 
-CREATE OR REPLACE VIEW public.public_service_providers AS
+CREATE OR REPLACE VIEW public.public_service_providers WITH (security_invoker=on) AS
 SELECT id, owner_id, category_id, name_ar, name_en, description, city,
        portfolio_images, work_days, rating, reviews_count,
        whatsapp_enabled, is_active, created_at, updated_at
 FROM public.service_providers
 WHERE is_active = true;
 
-CREATE OR REPLACE VIEW public.public_dresses AS
+CREATE OR REPLACE VIEW public.public_dresses WITH (security_invoker=on) AS
 SELECT id, seller_id, title, description, price, size, condition, category, city,
        images, whatsapp_enabled, is_active, is_sold, created_at, updated_at
 FROM public.dresses
 WHERE is_active = true AND is_sold = false;
 
 -- =============================================
--- الجزء 6: Storage Buckets
+-- الجزء 7: Storage Buckets - ON CONFLICT DO NOTHING
 -- =============================================
 
 INSERT INTO storage.buckets (id, name, public) VALUES ('hall-images', 'hall-images', true) ON CONFLICT DO NOTHING;
@@ -666,28 +926,51 @@ INSERT INTO storage.buckets (id, name, public) VALUES ('dress-images', 'dress-im
 INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true) ON CONFLICT DO NOTHING;
 INSERT INTO storage.buckets (id, name, public) VALUES ('chat-images', 'chat-images', true) ON CONFLICT DO NOTHING;
 
--- سياسات التخزين
+-- سياسات التخزين - DROP IF EXISTS ثم CREATE
+DROP POLICY IF EXISTS "Public read for hall-images" ON storage.objects;
 CREATE POLICY "Public read for hall-images" ON storage.objects FOR SELECT USING (bucket_id = 'hall-images');
+
+DROP POLICY IF EXISTS "Authenticated upload for hall-images" ON storage.objects;
 CREATE POLICY "Authenticated upload for hall-images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'hall-images' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Owner delete for hall-images" ON storage.objects;
 CREATE POLICY "Owner delete for hall-images" ON storage.objects FOR DELETE USING (bucket_id = 'hall-images' AND auth.uid()::text = (storage.foldername(name))[1]);
 
+DROP POLICY IF EXISTS "Public read for service-images" ON storage.objects;
 CREATE POLICY "Public read for service-images" ON storage.objects FOR SELECT USING (bucket_id = 'service-images');
+
+DROP POLICY IF EXISTS "Authenticated upload for service-images" ON storage.objects;
 CREATE POLICY "Authenticated upload for service-images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'service-images' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Owner delete for service-images" ON storage.objects;
 CREATE POLICY "Owner delete for service-images" ON storage.objects FOR DELETE USING (bucket_id = 'service-images' AND auth.uid()::text = (storage.foldername(name))[1]);
 
+DROP POLICY IF EXISTS "Public read for dress-images" ON storage.objects;
 CREATE POLICY "Public read for dress-images" ON storage.objects FOR SELECT USING (bucket_id = 'dress-images');
+
+DROP POLICY IF EXISTS "Authenticated upload for dress-images" ON storage.objects;
 CREATE POLICY "Authenticated upload for dress-images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'dress-images' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Owner delete for dress-images" ON storage.objects;
 CREATE POLICY "Owner delete for dress-images" ON storage.objects FOR DELETE USING (bucket_id = 'dress-images' AND auth.uid()::text = (storage.foldername(name))[1]);
 
+DROP POLICY IF EXISTS "Public read for avatars" ON storage.objects;
 CREATE POLICY "Public read for avatars" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Authenticated upload for avatars" ON storage.objects;
 CREATE POLICY "Authenticated upload for avatars" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Owner delete for avatars" ON storage.objects;
 CREATE POLICY "Owner delete for avatars" ON storage.objects FOR DELETE USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
 
+DROP POLICY IF EXISTS "Public read for chat-images" ON storage.objects;
 CREATE POLICY "Public read for chat-images" ON storage.objects FOR SELECT USING (bucket_id = 'chat-images');
+
+DROP POLICY IF EXISTS "Authenticated upload for chat-images" ON storage.objects;
 CREATE POLICY "Authenticated upload for chat-images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'chat-images' AND auth.role() = 'authenticated');
 
 -- =============================================
--- الجزء 7: البيانات التجريبية
+-- الجزء 8: البيانات التجريبية
 -- استبدل PLACEHOLDER_USER_ID بمعرف المستخدم الفعلي
 -- =============================================
 
@@ -702,5 +985,5 @@ CREATE POLICY "Authenticated upload for chat-images" ON storage.objects FOR INSE
 -- INSERT INTO public.user_roles (user_id, role) VALUES ('YOUR_SERVICE_PROVIDER_USER_ID', 'service_provider');
 
 -- =============================================
--- نهاية الملف
+-- ✅ نهاية الملف - آمن للتنفيذ المتكرر
 -- =============================================
