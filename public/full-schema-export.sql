@@ -743,15 +743,208 @@ CREATE POLICY "Admins can delete analytics" ON public.analytics_events FOR DELET
 -- الجزء 8: إنشاء Storage Buckets
 -- ============================================
 
--- ملاحظة: يجب تنفيذ هذا من خلال Supabase Dashboard أو API
--- INSERT INTO storage.buckets (id, name, public) VALUES ('hall-images', 'hall-images', true);
--- INSERT INTO storage.buckets (id, name, public) VALUES ('service-images', 'service-images', true);
--- INSERT INTO storage.buckets (id, name, public) VALUES ('dress-images', 'dress-images', true);
--- INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
--- INSERT INTO storage.buckets (id, name, public) VALUES ('chat-images', 'chat-images', true);
+-- إنشاء الـ Buckets
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES 
+  ('hall-images', 'hall-images', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+  ('service-images', 'service-images', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+  ('dress-images', 'dress-images', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+  ('avatars', 'avatars', true, 2097152, ARRAY['image/jpeg', 'image/png', 'image/webp']),
+  ('chat-images', 'chat-images', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================
--- الجزء 9: البيانات التجريبية
+-- الجزء 9: Storage RLS Policies
+-- ============================================
+
+-- === Hall Images Policies ===
+-- الجميع يمكنهم مشاهدة صور القاعات
+CREATE POLICY "Hall images are publicly accessible"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'hall-images');
+
+-- أصحاب القاعات يمكنهم رفع الصور
+CREATE POLICY "Hall owners can upload images"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'hall-images' 
+  AND auth.uid() IS NOT NULL
+  AND (
+    has_role(auth.uid(), 'hall_owner') 
+    OR has_role(auth.uid(), 'admin')
+  )
+);
+
+-- أصحاب القاعات يمكنهم تحديث صورهم
+CREATE POLICY "Hall owners can update their images"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'hall-images' 
+  AND auth.uid() IS NOT NULL
+  AND (
+    has_role(auth.uid(), 'hall_owner') 
+    OR has_role(auth.uid(), 'admin')
+  )
+);
+
+-- أصحاب القاعات يمكنهم حذف صورهم
+CREATE POLICY "Hall owners can delete their images"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'hall-images' 
+  AND auth.uid() IS NOT NULL
+  AND (
+    has_role(auth.uid(), 'hall_owner') 
+    OR has_role(auth.uid(), 'admin')
+  )
+);
+
+-- === Service Images Policies ===
+-- الجميع يمكنهم مشاهدة صور الخدمات
+CREATE POLICY "Service images are publicly accessible"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'service-images');
+
+-- مقدمو الخدمات يمكنهم رفع الصور
+CREATE POLICY "Service providers can upload images"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'service-images' 
+  AND auth.uid() IS NOT NULL
+  AND (
+    has_role(auth.uid(), 'service_provider') 
+    OR has_role(auth.uid(), 'admin')
+  )
+);
+
+-- مقدمو الخدمات يمكنهم تحديث صورهم
+CREATE POLICY "Service providers can update their images"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'service-images' 
+  AND auth.uid() IS NOT NULL
+  AND (
+    has_role(auth.uid(), 'service_provider') 
+    OR has_role(auth.uid(), 'admin')
+  )
+);
+
+-- مقدمو الخدمات يمكنهم حذف صورهم
+CREATE POLICY "Service providers can delete their images"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'service-images' 
+  AND auth.uid() IS NOT NULL
+  AND (
+    has_role(auth.uid(), 'service_provider') 
+    OR has_role(auth.uid(), 'admin')
+  )
+);
+
+-- === Dress Images Policies ===
+-- الجميع يمكنهم مشاهدة صور الفساتين
+CREATE POLICY "Dress images are publicly accessible"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'dress-images');
+
+-- بائعو الفساتين يمكنهم رفع الصور
+CREATE POLICY "Dress sellers can upload images"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'dress-images' 
+  AND auth.uid() IS NOT NULL
+  AND (
+    has_role(auth.uid(), 'dress_seller') 
+    OR has_role(auth.uid(), 'admin')
+  )
+);
+
+-- بائعو الفساتين يمكنهم تحديث صورهم
+CREATE POLICY "Dress sellers can update their images"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'dress-images' 
+  AND auth.uid() IS NOT NULL
+  AND (
+    has_role(auth.uid(), 'dress_seller') 
+    OR has_role(auth.uid(), 'admin')
+  )
+);
+
+-- بائعو الفساتين يمكنهم حذف صورهم
+CREATE POLICY "Dress sellers can delete their images"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'dress-images' 
+  AND auth.uid() IS NOT NULL
+  AND (
+    has_role(auth.uid(), 'dress_seller') 
+    OR has_role(auth.uid(), 'admin')
+  )
+);
+
+-- === Avatars Policies ===
+-- الجميع يمكنهم مشاهدة الصور الشخصية
+CREATE POLICY "Avatars are publicly accessible"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'avatars');
+
+-- المستخدمون يمكنهم رفع صورهم الشخصية في مجلدهم فقط
+CREATE POLICY "Users can upload own avatar"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'avatars' 
+  AND auth.uid() IS NOT NULL
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- المستخدمون يمكنهم تحديث صورهم الشخصية
+CREATE POLICY "Users can update own avatar"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'avatars' 
+  AND auth.uid() IS NOT NULL
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- المستخدمون يمكنهم حذف صورهم الشخصية
+CREATE POLICY "Users can delete own avatar"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'avatars' 
+  AND auth.uid() IS NOT NULL
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- === Chat Images Policies ===
+-- المستخدمون في المحادثة يمكنهم مشاهدة الصور
+CREATE POLICY "Chat images are viewable by conversation participants"
+ON storage.objects FOR SELECT
+USING (
+  bucket_id = 'chat-images'
+  AND auth.uid() IS NOT NULL
+);
+
+-- المستخدمون يمكنهم رفع صور في مجلدهم فقط
+CREATE POLICY "Users can upload chat images to own folder"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'chat-images' 
+  AND auth.uid() IS NOT NULL
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- المستخدمون يمكنهم حذف صورهم في المحادثات
+CREATE POLICY "Users can delete own chat images"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'chat-images' 
+  AND auth.uid() IS NOT NULL
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- ============================================
+-- الجزء 10: البيانات التجريبية
 -- ⚠️ ملاحظة: يجب تحديث owner_id و seller_id بعد إنشاء المستخدمين
 -- ============================================
 
