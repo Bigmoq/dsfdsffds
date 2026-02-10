@@ -1360,6 +1360,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_user_role_after_onboarding: {
+        Args: { user_role: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:

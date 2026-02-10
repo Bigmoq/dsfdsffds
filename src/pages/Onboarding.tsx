@@ -143,32 +143,38 @@ export default function Onboarding() {
     setLoading(true);
     
     try {
-      // Use secure server-side function to assign initial 'user' role
-      // This prevents privilege escalation by only allowing 'user' role assignment
-      const { error: roleError } = await supabase
-        .rpc('assign_initial_user_role', { p_user_id: user.id });
+      if (selectedRole === "user") {
+        // Assign base 'user' role via secure RPC
+        const { error: roleError } = await supabase
+          .rpc('assign_initial_user_role', { p_user_id: user.id });
+        
+        if (roleError) throw roleError;
+        
+        // Update profile onboarding status
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ onboarding_completed: true })
+          .eq("id", user.id);
+        
+        if (profileError) throw profileError;
+      } else {
+        // For vendor roles, call the RPC that assigns the role + marks onboarding complete
+        const { error: rpcError } = await supabase
+          .rpc('update_user_role_after_onboarding', { user_role: selectedRole });
+        
+        if (rpcError) throw rpcError;
+      }
       
-      if (roleError) throw roleError;
-      
-      // Update profile onboarding status
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ onboarding_completed: true })
-        .eq("id", user.id);
-      
-      if (profileError) throw profileError;
-      
-      // For vendor roles, users must apply through the vendor application process
-      // which requires admin approval - this is handled in VendorApplicationSheet
       toast({
         title: "مرحباً بك!",
         description: selectedRole === "user" 
           ? "استمتع بتصفح أفضل قاعات الأفراح"
-          : "تم إنشاء حسابك بنجاح. لتصبح مقدم خدمة، يرجى تقديم طلب من صفحة الملف الشخصي",
+          : "تم إنشاء حسابك بنجاح كمقدم خدمة",
       });
       
       redirectBasedOnRole(selectedRole);
     } catch (error: any) {
+      console.error("Onboarding error:", error);
       toast({
         title: "خطأ",
         description: "حدث خطأ أثناء حفظ البيانات",
