@@ -58,13 +58,22 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
         } else {
           setActiveView("dashboard");
         }
-        setLoading(false);
-        return;
       }
       
       // Check if this is a vendor role
       if (role === "hall_owner" || role === "service_provider" || role === "dress_seller") {
         try {
+          // Check vendor application approval status
+          const { data: application } = await supabase
+            .from('vendor_applications')
+            .select('status')
+            .eq('user_id', user.id)
+            .order('applied_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          setVendorApprovalStatus(application?.status || null);
+
           // Check database for vendor_welcome_seen status
           const { data: profile, error } = await supabase
             .from('profiles')
@@ -74,7 +83,7 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
           
           if (error) {
             console.error('Error checking welcome status:', error);
-          } else if (!profile?.vendor_welcome_seen) {
+          } else if (!profile?.vendor_welcome_seen && application?.status === 'approved') {
             setShowWelcome(true);
           }
         } catch (err) {
