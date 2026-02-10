@@ -26,6 +26,7 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<string>("dashboard");
   const [showWelcome, setShowWelcome] = useState(false);
+  const [vendorApprovalStatus, setVendorApprovalStatus] = useState<string | null>(null);
 
   const handleLogout = async () => {
     try {
