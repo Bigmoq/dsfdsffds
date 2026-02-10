@@ -1360,6 +1360,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_vendor_approved: { Args: { vendor_user_id: string }; Returns: boolean }
       update_user_role_after_onboarding: {
         Args: { user_role: string }
         Returns: undefined
