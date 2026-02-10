@@ -124,6 +124,15 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
     return <VendorWelcome onComplete={handleWelcomeComplete} vendorType={role} />;
   }
 
+  // Show pending approval screen if vendor is not yet approved
+  if (vendorApprovalStatus && vendorApprovalStatus !== 'approved' && 
+      (role === "hall_owner" || role === "service_provider" || role === "dress_seller")) {
+    return <VendorPendingApproval onLogout={async () => {
+      await signOut();
+      window.location.href = '/';
+    }} />;
+  }
+
   const renderContent = () => {
     // Hall Owner Views
     if (role === "hall_owner") {
