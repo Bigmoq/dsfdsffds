@@ -14,6 +14,7 @@ import { BookingCalendarView } from "./BookingCalendarView";
 import { VendorQuickStats } from "./VendorQuickStats";
 import { VendorWelcome } from "./VendorWelcome";
 import { VendorBottomNav } from "./VendorBottomNav";
+import { VendorPendingApproval } from "./VendorPendingApproval";
 
 interface VendorDashboardProps {
   initialSection?: string | null;

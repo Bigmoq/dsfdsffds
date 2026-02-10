@@ -163,6 +163,27 @@ export default function Onboarding() {
           .rpc('update_user_role_after_onboarding', { user_role: selectedRole });
         
         if (rpcError) throw rpcError;
+
+        // Auto-create vendor application with pending status
+        const roleLabels: Record<string, string> = {
+          hall_owner: "صاحب قاعة",
+          service_provider: "مقدم خدمة",
+          dress_seller: "بائع فساتين",
+        };
+        
+        const { error: appError } = await supabase
+          .from("vendor_applications")
+          .insert({
+            user_id: user.id,
+            role: selectedRole as "hall_owner" | "service_provider" | "dress_seller",
+            business_name: user.user_metadata?.full_name || roleLabels[selectedRole] || "بائع جديد",
+            business_description: `طلب انضمام تلقائي كـ ${roleLabels[selectedRole]}`,
+            status: "pending",
+          });
+        
+        if (appError) {
+          console.error("Error creating vendor application:", appError);
+        }
       }
       
       toast({
