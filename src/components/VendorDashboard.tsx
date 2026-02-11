@@ -14,7 +14,7 @@ import { BookingCalendarView } from "./BookingCalendarView";
 import { VendorQuickStats } from "./VendorQuickStats";
 import { VendorWelcome } from "./VendorWelcome";
 import { VendorBottomNav } from "./VendorBottomNav";
-import { VendorPendingApproval } from "./VendorPendingApproval";
+import { VendorPendingBanner } from "./VendorPendingApproval";
 
 interface VendorDashboardProps {
   initialSection?: string | null;
@@ -124,14 +124,9 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
     return <VendorWelcome onComplete={handleWelcomeComplete} vendorType={role} />;
   }
 
-  // Show pending approval screen if vendor is not yet approved
-  if (vendorApprovalStatus && vendorApprovalStatus !== 'approved' && 
-      (role === "hall_owner" || role === "service_provider" || role === "dress_seller")) {
-    return <VendorPendingApproval onLogout={async () => {
-      await signOut();
-      window.location.href = '/';
-    }} />;
-  }
+  // Track if vendor is pending (used for banner)
+  const isPendingApproval = vendorApprovalStatus && vendorApprovalStatus !== 'approved' && 
+      (role === "hall_owner" || role === "service_provider" || role === "dress_seller");
 
   const renderContent = () => {
     // Hall Owner Views
@@ -339,6 +334,7 @@ export function VendorDashboard({ initialSection }: VendorDashboardProps) {
 
   return (
     <div className="min-h-screen">
+      {isPendingApproval && <VendorPendingBanner />}
       <AnimatePresence mode="wait">
         {renderContent()}
       </AnimatePresence>
