@@ -458,6 +458,7 @@ export type Database = {
       }
       hall_bookings: {
         Row: {
+          amount: number | null
           booking_date: string
           created_at: string | null
           guest_count_men: number | null
@@ -465,6 +466,8 @@ export type Database = {
           hall_id: string
           id: string
           notes: string | null
+          payment_id: string | null
+          payment_status: string
           status: Database["public"]["Enums"]["booking_status"] | null
           stripe_payment_id: string | null
           total_price: number | null
@@ -472,6 +475,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          amount?: number | null
           booking_date: string
           created_at?: string | null
           guest_count_men?: number | null
@@ -479,6 +483,8 @@ export type Database = {
           hall_id: string
           id?: string
           notes?: string | null
+          payment_id?: string | null
+          payment_status?: string
           status?: Database["public"]["Enums"]["booking_status"] | null
           stripe_payment_id?: string | null
           total_price?: number | null
@@ -486,6 +492,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          amount?: number | null
           booking_date?: string
           created_at?: string | null
           guest_count_men?: number | null
@@ -493,6 +500,8 @@ export type Database = {
           hall_id?: string
           id?: string
           notes?: string | null
+          payment_id?: string | null
+          payment_status?: string
           status?: Database["public"]["Enums"]["booking_status"] | null
           stripe_payment_id?: string | null
           total_price?: number | null
@@ -747,11 +756,14 @@ export type Database = {
       }
       service_bookings: {
         Row: {
+          amount: number | null
           booking_date: string
           created_at: string
           id: string
           notes: string | null
           package_id: string | null
+          payment_id: string | null
+          payment_status: string
           provider_id: string
           status: string
           total_price: number
@@ -759,11 +771,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          amount?: number | null
           booking_date: string
           created_at?: string
           id?: string
           notes?: string | null
           package_id?: string | null
+          payment_id?: string | null
+          payment_status?: string
           provider_id: string
           status?: string
           total_price: number
@@ -771,11 +786,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          amount?: number | null
           booking_date?: string
           created_at?: string
           id?: string
           notes?: string | null
           package_id?: string | null
+          payment_id?: string | null
+          payment_status?: string
           provider_id?: string
           status?: string
           total_price?: number
