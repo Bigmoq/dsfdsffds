@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { LocationMap } from "./LocationMap";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { ChatSheet } from "./chat/ChatSheet";
+import { MoyasarPaymentModal } from "./MoyasarPaymentModal";
 type AvailabilityStatus = 'available' | 'booked' | 'resale';
 
 // Support both old mock data and new database schema
@@ -85,6 +86,8 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [availability, setAvailability] = useState<Record<string, AvailabilityStatus>>({});
   const [chatOpen, setChatOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -249,7 +252,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.from("hall_bookings").insert({
+      const { data, error } = await supabase.from("hall_bookings").insert({
         hall_id: hall.id,
         user_id: session.user.id,
         booking_date: format(selectedDate, "yyyy-MM-dd"),
@@ -257,16 +260,15 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
         guest_count_women: guestCountWomen,
         total_price: price,
         status: "pending",
-      });
+        payment_status: "pending",
+        amount: 100, // 1 SAR in Halalas for testing
+      }).select().single();
 
       if (error) throw error;
 
-      toast({
-        title: "تم إرسال طلب الحجز",
-        description: "سيتم مراجعة طلبك والرد عليك قريباً",
-      });
-      
-      handleClose();
+      // Open payment modal
+      setPendingBookingId(data.id);
+      setPaymentOpen(true);
     } catch (error: any) {
       toast({
         title: "خطأ في الحجز",
@@ -892,6 +894,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
   );
 
   return (
+    <>
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent 
         side="bottom" 
@@ -910,5 +913,24 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
         </div>
       </SheetContent>
     </Sheet>
+
+    {/* Payment Modal */}
+    {pendingBookingId && (
+      <MoyasarPaymentModal
+        isOpen={paymentOpen}
+        onClose={() => {
+          setPaymentOpen(false);
+          toast({
+            title: "⚠️ الدفع مطلوب",
+            description: "يجب إتمام الدفع لتأكيد الحجز",
+            variant: "destructive",
+          });
+        }}
+        amount={1}
+        bookingId={pendingBookingId}
+        description={`حجز قاعة ${isDatabaseHall(hall) ? hall.name_ar : hall.nameAr}`}
+      />
+    )}
+    </>
   );
 }
