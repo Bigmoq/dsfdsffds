@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { MoyasarPaymentModal } from "./MoyasarPaymentModal";
 
 interface ServicePackage {
   id: string;
@@ -41,6 +42,8 @@ export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initi
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Update selected date when initialDate changes
@@ -111,7 +114,7 @@ export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initi
         return;
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('service_bookings')
         .insert({
           provider_id: provider.id,
@@ -121,15 +124,17 @@ export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initi
           total_price: selectedPackage.price,
           notes: notes.trim() || null,
           status: 'pending',
-        });
+          payment_status: 'pending',
+          amount: 100, // 1 SAR in Halalas for testing
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      setBookingConfirmed(true);
-      toast({
-        title: "تم إرسال الحجز",
-        description: "سيتم مراجعة طلبك وتأكيده قريباً",
-      });
+      // Open payment modal
+      setPendingBookingId(data.id);
+      setPaymentOpen(true);
     } catch (error) {
       console.error('Error creating booking:', error);
       toast({
@@ -187,7 +192,8 @@ export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initi
     );
   }
 
-  return (
+  return (<>
+
     <Sheet open={isOpen} onOpenChange={handleClose}>
       <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl overflow-y-auto">
         <SheetHeader className="text-right mb-4">
@@ -317,5 +323,24 @@ export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initi
         </div>
       </SheetContent>
     </Sheet>
+
+    {/* Payment Modal */}
+    {pendingBookingId && (
+      <MoyasarPaymentModal
+        isOpen={paymentOpen}
+        onClose={() => {
+          setPaymentOpen(false);
+          toast({
+            title: "⚠️ الدفع مطلوب",
+            description: "يجب إتمام الدفع لتأكيد الحجز",
+            variant: "destructive",
+          });
+        }}
+        amount={1}
+        bookingId={pendingBookingId}
+        description={`حجز خدمة ${provider.name_ar}`}
+      />
+    )}
+    </>
   );
 };
