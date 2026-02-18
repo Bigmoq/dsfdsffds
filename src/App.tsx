@@ -31,21 +31,13 @@ const queryClient = new QueryClient({
 // Component to redirect first-time visitors to welcome page
 const FirstVisitRedirect = () => {
   const location = useLocation();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
 
-  useEffect(() => {
-    // Only check on root path
-    if (location.pathname === '/') {
-      const hasVisited = localStorage.getItem('hasVisitedApp');
-      if (!hasVisited) {
-        localStorage.setItem('hasVisitedApp', 'true');
-        setShouldRedirect(true);
-      }
+  if (location.pathname === '/') {
+    const hasVisited = localStorage.getItem('hasVisitedApp');
+    if (!hasVisited) {
+      localStorage.setItem('hasVisitedApp', 'true');
+      return <Navigate to="/welcome" replace />;
     }
-  }, [location.pathname]);
-
-  if (shouldRedirect && location.pathname === '/') {
-    return <Navigate to="/welcome" replace />;
   }
 
   return null;
