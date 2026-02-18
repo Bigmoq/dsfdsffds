@@ -109,9 +109,9 @@ export default function Welcome() {
             className="absolute bottom-8 text-center text-sm text-muted-foreground font-arabic"
           >
             بتسجيلك، أنت توافق على{" "}
-            <button className="text-primary hover:underline">شروط الاستخدام</button>
+            <a href="/terms" className="text-primary hover:underline">شروط الاستخدام</a>
             {" "}و{" "}
-            <button className="text-primary hover:underline">سياسة الخصوصية</button>
+            <a href="/privacy" className="text-primary hover:underline">سياسة الخصوصية</a>
           </motion.p>
         </div>
       </div>
