@@ -74,8 +74,8 @@ export function MoyasarPaymentModal({
       // Build callback URL
       const callbackUrl = `${window.location.origin}/payment-status?booking_id=${bookingId}`;
 
-      // Amount in Halalas (1 SAR = 100 Halalas) — fixed 1 SAR for testing
-      const amountInHalalas = 100;
+      // Amount in Halalas (1 SAR = 100 Halalas)
+      const amountInHalalas = amount * 100;
 
       window.Moyasar.init({
         element: "#moyasar-payment-form",
@@ -100,7 +100,7 @@ export function MoyasarPaymentModal({
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">إتمام الدفع</DialogTitle>
           <DialogDescription>
-            المبلغ المطلوب: <span className="font-bold text-primary">1.00 ر.س</span> (تجريبي)
+            المبلغ المطلوب: <span className="font-bold text-primary">{amount.toFixed(2)} ر.س</span>
           </DialogDescription>
         </DialogHeader>
 

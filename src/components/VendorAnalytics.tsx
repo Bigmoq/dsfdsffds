@@ -216,6 +216,7 @@ export function VendorAnalytics() {
 
     try {
       const tableName = role === "hall_owner" ? "hall_bookings" : "service_bookings";
+      const bookingType = role === "hall_owner" ? "hall" : "service";
       
       const { error } = await supabase
         .from(tableName)
@@ -223,6 +224,17 @@ export function VendorAnalytics() {
         .eq("id", bookingId);
 
       if (error) throw error;
+
+      // Process refund if rejected or cancelled
+      if (newStatus === "rejected" || newStatus === "cancelled") {
+        try {
+          await supabase.functions.invoke("process-refund", {
+            body: { booking_id: bookingId, booking_type: bookingType },
+          });
+        } catch (refundErr) {
+          console.error("Refund error (non-blocking):", refundErr);
+        }
+      }
 
       // Update local state
       if (selectedBooking) {

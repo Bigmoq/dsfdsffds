@@ -125,7 +125,7 @@ export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initi
           notes: notes.trim() || null,
           status: 'pending',
           payment_status: 'pending',
-          amount: 100, // 1 SAR in Halalas for testing
+          amount: 1000, // 10 SAR in Halalas
         })
         .select()
         .single();
@@ -336,7 +336,7 @@ export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initi
             variant: "destructive",
           });
         }}
-        amount={1}
+        amount={10}
         bookingId={pendingBookingId}
         description={`حجز خدمة ${provider.name_ar}`}
       />
