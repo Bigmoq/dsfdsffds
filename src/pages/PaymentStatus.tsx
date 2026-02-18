@@ -76,7 +76,7 @@ export default function PaymentStatus() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-foreground mb-2">تم تأكيد الحجز!</h2>
-                <p className="text-muted-foreground">تم دفع 1 ر.س بنجاح</p>
+                <p className="text-muted-foreground">تم دفع العربون بنجاح</p>
               </div>
               <Button onClick={() => navigate("/")} className="w-full max-w-xs">
                 العودة لحجوزاتي

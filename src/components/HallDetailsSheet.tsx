@@ -261,7 +261,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
         total_price: price,
         status: "pending",
         payment_status: "pending",
-        amount: 100, // 1 SAR in Halalas for testing
+        amount: 1000, // 10 SAR in Halalas
       }).select().single();
 
       if (error) throw error;
@@ -862,9 +862,13 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
       </div>
 
       {/* Note */}
-      <div className="bg-muted/50 rounded-xl p-4 text-center">
-        <p className="text-sm text-muted-foreground">
-          سيتم مراجعة طلب الحجز من قبل إدارة القاعة والرد عليك خلال 24 ساعة
+      {/* Deposit Note */}
+      <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center space-y-2">
+        <p className="text-sm font-semibold text-foreground">
+          💰 عربون الحجز: 10 ر.س
+        </p>
+        <p className="text-xs text-muted-foreground">
+          يتم دفع عربون لإرسال طلب الحجز. في حال قبول الحجز يُخصم المبلغ، وفي حال الرفض يُعاد إليك كاملاً.
         </p>
       </div>
 
@@ -926,9 +930,9 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
             variant: "destructive",
           });
         }}
-        amount={1}
+        amount={10}
         bookingId={pendingBookingId}
-        description={`حجز قاعة ${isDatabaseHall(hall) ? hall.name_ar : hall.nameAr}`}
+        description={`عربون حجز قاعة ${isDatabaseHall(hall) ? hall.name_ar : hall.nameAr}`}
       />
     )}
     </>

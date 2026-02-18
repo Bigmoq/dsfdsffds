@@ -114,10 +114,21 @@ export function HallBookingManagement({ refreshKey }: HallBookingManagementProps
         variant: "destructive",
       });
     } else {
+      // Process refund if rejected or cancelled
+      if (status === "rejected" || status === "cancelled") {
+        try {
+          await supabase.functions.invoke("process-refund", {
+            body: { booking_id: bookingId, booking_type: "hall" },
+          });
+        } catch (refundErr) {
+          console.error("Refund error (non-blocking):", refundErr);
+        }
+      }
+
       const messages: Record<BookingStatus, { title: string; description: string }> = {
         accepted: { title: "تم قبول الحجز", description: "سيتم إشعار العميل بالموافقة" },
-        rejected: { title: "تم رفض الحجز", description: "سيتم إشعار العميل بالرفض" },
-        cancelled: { title: "تم إلغاء الحجز", description: "تم إلغاء الحجز بنجاح" },
+        rejected: { title: "تم رفض الحجز", description: "سيتم إشعار العميل وإرجاع العربون" },
+        cancelled: { title: "تم إلغاء الحجز", description: "تم إلغاء الحجز وإرجاع العربون" },
         pending: { title: "تم التحديث", description: "تم تحديث حالة الحجز" },
       };
       toast(messages[status]);
