@@ -254,6 +254,33 @@ export function ServicesScreen() {
             exit={{ opacity: 0, x: -100 }}
             className="px-4 py-4"
           >
+            {/* City Filter Bar */}
+            <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide" dir="rtl">
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, city: '' }))}
+                className={`px-4 py-2 rounded-full text-sm font-arabic whitespace-nowrap transition-all flex-shrink-0 ${
+                  !filters.city
+                    ? "bg-foreground text-background shadow-md"
+                    : "bg-card text-muted-foreground border border-border/50 hover:bg-muted"
+                }`}
+              >
+                كل المدن
+              </button>
+              {availableCities.map((city) => (
+                <button
+                  key={city}
+                  onClick={() => setFilters(prev => ({ ...prev, city: prev.city === city ? '' : city }))}
+                  className={`px-4 py-2 rounded-full text-sm font-arabic whitespace-nowrap transition-all flex-shrink-0 ${
+                    filters.city === city
+                      ? "bg-foreground text-background shadow-md"
+                      : "bg-card text-muted-foreground border border-border/50 hover:bg-muted"
+                  }`}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+
             <div className="flex items-center justify-between mb-4">
               <Badge variant="secondary" className="font-arabic">
                 {allVendors.length} {totalCount > allVendors.length ? `من ${totalCount}` : ''} مقدم خدمة
