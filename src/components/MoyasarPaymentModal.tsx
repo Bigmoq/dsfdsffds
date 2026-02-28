@@ -84,7 +84,7 @@ export function MoyasarPaymentModal({
         description: `${description} - ${bookingId}`,
         publishable_api_key: publishableKey,
         callback_url: callbackUrl,
-        methods: ["creditcard", "applepay", "stcpay"],
+        methods: ["creditcard", "stcpay"],
         fixed_width: false,
       });
 
