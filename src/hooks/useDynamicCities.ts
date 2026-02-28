@@ -5,14 +5,25 @@ import { supabase } from "@/integrations/supabase/client";
  * Hook to fetch unique cities from a specific table
  * Cities are dynamically populated based on actual data in the database
  */
-export function useDynamicCities(tableName: 'public_halls' | 'public_service_providers' | 'public_dresses') {
+export function useDynamicCities(tableName: 'public_halls' | 'public_service_providers' | 'public_dresses', filters?: Record<string, string>) {
   return useQuery({
-    queryKey: ['dynamic-cities', tableName],
+    queryKey: ['dynamic-cities', tableName, filters],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from(tableName)
         .select('city')
-        .not('city', 'is', null);
+        .not('city', 'is', null) as any;
+
+      // Apply optional filters (e.g., category_id)
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) {
+            query = query.eq(key, value);
+          }
+        });
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error(`Error fetching cities from ${tableName}:`, error);
