@@ -77,7 +77,7 @@ export function MoyasarPaymentModal({
       // Amount in Halalas (1 SAR = 100 Halalas)
       const amountInHalalas = amount * 100;
 
-      window.Moyasar.init({
+      (window.Moyasar.init as (config: Record<string, unknown>) => void)({
         element: "#moyasar-payment-form",
         amount: amountInHalalas,
         currency: "SAR",
