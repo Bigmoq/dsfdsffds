@@ -78,7 +78,11 @@ export function ServicesScreen() {
   }, [categories, searchQuery]);
 
   // Fetch dynamic cities for the selected category
-  const { data: dynamicCities = [] } = useDynamicCities('public_service_providers');
+  const cityFilters = useMemo(() => {
+    return selectedCategory ? { category_id: selectedCategory.id } : undefined;
+  }, [selectedCategory]);
+  
+  const { data: dynamicCities = [] } = useDynamicCities('public_service_providers', cityFilters);
   
   // Get unique cities for filter (use dynamic cities from database)
   const availableCities = useMemo(() => {
