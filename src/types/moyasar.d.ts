@@ -12,6 +12,11 @@ declare global {
         on_completed?: (payment: MoyasarPayment) => void;
         on_failed?: (error: any) => void;
         fixed_width?: boolean;
+        apple_pay?: {
+          country: string;
+          label: string;
+          validate_merchant_url: string;
+        };
       }) => void;
     };
   }

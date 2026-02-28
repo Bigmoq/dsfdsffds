@@ -84,7 +84,12 @@ export function MoyasarPaymentModal({
         description: `${description} - ${bookingId}`,
         publishable_api_key: publishableKey,
         callback_url: callbackUrl,
-        methods: ["creditcard", "stcpay"],
+        methods: ["creditcard", "applepay", "stcpay"],
+        apple_pay: {
+          country: "SA",
+          label: "زفاف - دفع حجز",
+          validate_merchant_url: "https://api.moyasar.com/v1/applepay/initiate",
+        },
         fixed_width: false,
       });
 
