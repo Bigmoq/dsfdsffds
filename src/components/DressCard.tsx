@@ -1,3 +1,4 @@
+import React from "react";
 import { MapPin, Sparkles, Tag, Heart, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Dress } from "@/data/weddingData";
@@ -20,7 +21,7 @@ function getTimeAgo(dateString?: string): string {
   }
 }
 
-export function DressCard({ dress, onClick }: DressCardProps) {
+const DressCardInner = ({ dress, onClick }: DressCardProps) => {
   const { isFavorite, toggleFavorite } = useDressFavorites();
   const dressId = (dress as any).id;
   const isLiked = dressId ? isFavorite(dressId) : false;
@@ -108,4 +109,6 @@ export function DressCard({ dress, onClick }: DressCardProps) {
       </div>
     </motion.div>
   );
-}
+};
+
+export const DressCard = React.memo(DressCardInner);

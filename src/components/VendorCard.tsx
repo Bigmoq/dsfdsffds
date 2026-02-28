@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Star, MessageCircle, MapPin, Heart, Package, CheckCircle } from "lucide-react";
 import { Vendor } from "@/data/weddingData";
@@ -23,7 +23,7 @@ interface VendorCardProps {
   onClick?: () => void;
 }
 
-export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
+const VendorCardInner = ({ vendor, index, onClick }: VendorCardProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { isFavorite, toggleFavorite } = useServiceFavorites();
   const { user } = useAuth();
@@ -86,7 +86,7 @@ export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
         >
           {images.map((img, imgIndex) => (
             <div 
-              key={imgIndex} 
+              key={img || imgIndex} 
               className="w-full h-40 flex-shrink-0 snap-center"
             >
               <img 
@@ -209,4 +209,6 @@ export function VendorCard({ vendor, index, onClick }: VendorCardProps) {
       )}
     </motion.div>
   );
-}
+};
+
+export const VendorCard = React.memo(VendorCardInner);

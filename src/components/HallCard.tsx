@@ -1,3 +1,4 @@
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { MapPin, Star, Users, Heart, Navigation } from "lucide-react";
 import { WeddingHall } from "@/data/weddingData";
@@ -42,7 +43,7 @@ function isDatabaseHall(hall: HallData): hall is DatabaseHall {
   return 'name_ar' in hall;
 }
 
-export function HallCard({ hall, index, onClick, userLatitude, userLongitude }: HallCardProps) {
+const HallCardInner = ({ hall, index, onClick, userLatitude, userLongitude }: HallCardProps) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   
   // Normalize data for both schemas
@@ -65,8 +66,11 @@ export function HallCard({ hall, index, onClick, userLatitude, userLongitude }: 
 
   const isHallFavorite = isFavorite(hallId);
 
-  // Fetch next 7 days availability
-  const next7Days = Array.from({ length: 7 }, (_, i) => format(addDays(new Date(), i), 'yyyy-MM-dd'));
+  // Memoize next7Days to prevent new query keys every render
+  const next7Days = useMemo(() => 
+    Array.from({ length: 7 }, (_, i) => format(addDays(new Date(), i), 'yyyy-MM-dd')),
+    [] // Only compute once per mount (dates change daily, not per render)
+  );
   
   const { data: availabilityData } = useQuery({
     queryKey: ['hall-availability-preview', hallId],
@@ -233,4 +237,6 @@ export function HallCard({ hall, index, onClick, userLatitude, userLongitude }: 
       </div>
     </motion.div>
   );
-}
+};
+
+export const HallCard = React.memo(HallCardInner);

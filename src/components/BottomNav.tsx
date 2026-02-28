@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { Home, Grid, Heart, User, Sparkles } from "lucide-react";
 
@@ -14,7 +15,7 @@ const navItems = [
   { index: 4, icon: User, label: "حسابي", labelEn: "Profile" },
 ];
 
-export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
+const BottomNavInner = ({ activeTab, setActiveTab }: BottomNavProps) => {
   return (
     <nav className="fixed bottom-6 left-4 right-4 z-50">
       <div className="bg-card/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl max-w-lg mx-auto px-2 py-3">
@@ -67,4 +68,6 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
       </div>
     </nav>
   );
-}
+};
+
+export const BottomNav = React.memo(BottomNavInner);

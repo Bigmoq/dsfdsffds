@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { ServiceCategory } from "@/data/weddingData";
 
@@ -7,7 +8,7 @@ interface CategoryCardProps {
   onClick: () => void;
 }
 
-export function CategoryCard({ category, index, onClick }: CategoryCardProps) {
+const CategoryCardInner = ({ category, index, onClick }: CategoryCardProps) => {
   const Icon = category.icon;
   
   return (
@@ -28,4 +29,6 @@ export function CategoryCard({ category, index, onClick }: CategoryCardProps) {
       </span>
     </motion.button>
   );
-}
+};
+
+export const CategoryCard = React.memo(CategoryCardInner);
