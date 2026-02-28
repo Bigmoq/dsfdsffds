@@ -266,9 +266,12 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
 
       if (error) throw error;
 
-      // Open payment modal
-      setPendingBookingId(data.id);
-      setPaymentOpen(true);
+      // Booking created successfully (payment disabled for now)
+      toast({
+        title: "تم إرسال الحجز بنجاح!",
+        description: "سيتم مراجعة طلبك وتأكيده قريباً",
+      });
+      handleClose();
     } catch (error: any) {
       toast({
         title: "خطأ في الحجز",
@@ -863,14 +866,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
 
       {/* Note */}
       {/* Deposit Note */}
-      <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center space-y-2">
-        <p className="text-sm font-semibold text-foreground">
-          💰 عربون الحجز: 10 ر.س
-        </p>
-        <p className="text-xs text-muted-foreground">
-          يتم دفع عربون لإرسال طلب الحجز. في حال قبول الحجز يُخصم المبلغ، وفي حال الرفض يُعاد إليك كاملاً.
-        </p>
-      </div>
+      {/* Payment deposit notice hidden for now */}
 
       <Button 
         className="w-full gold-gradient text-white"
@@ -918,23 +914,7 @@ export function HallDetailsSheet({ hall, open, onOpenChange }: HallDetailsSheetP
       </SheetContent>
     </Sheet>
 
-    {/* Payment Modal */}
-    {pendingBookingId && (
-      <MoyasarPaymentModal
-        isOpen={paymentOpen}
-        onClose={() => {
-          setPaymentOpen(false);
-          toast({
-            title: "⚠️ الدفع مطلوب",
-            description: "يجب إتمام الدفع لتأكيد الحجز",
-            variant: "destructive",
-          });
-        }}
-        amount={10}
-        bookingId={pendingBookingId}
-        description={`عربون حجز قاعة ${isDatabaseHall(hall) ? hall.name_ar : hall.nameAr}`}
-      />
-    )}
+    {/* Payment Modal - disabled for now */}
     </>
   );
 }

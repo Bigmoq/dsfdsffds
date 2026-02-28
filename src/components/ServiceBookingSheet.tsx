@@ -132,9 +132,8 @@ export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initi
 
       if (error) throw error;
 
-      // Open payment modal
-      setPendingBookingId(data.id);
-      setPaymentOpen(true);
+      // Booking created successfully (payment disabled for now)
+      setBookingConfirmed(true);
     } catch (error) {
       console.error('Error creating booking:', error);
       toast({
@@ -324,23 +323,7 @@ export const ServiceBookingSheet = ({ isOpen, onClose, provider, packages, initi
       </SheetContent>
     </Sheet>
 
-    {/* Payment Modal */}
-    {pendingBookingId && (
-      <MoyasarPaymentModal
-        isOpen={paymentOpen}
-        onClose={() => {
-          setPaymentOpen(false);
-          toast({
-            title: "⚠️ الدفع مطلوب",
-            description: "يجب إتمام الدفع لتأكيد الحجز",
-            variant: "destructive",
-          });
-        }}
-        amount={10}
-        bookingId={pendingBookingId}
-        description={`حجز خدمة ${provider.name_ar}`}
-      />
-    )}
+    {/* Payment Modal - disabled for now */}
     </>
   );
 };
