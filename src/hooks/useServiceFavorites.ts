@@ -1,39 +1,28 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useToast } from "./use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useServiceFavorites() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const fetchFavorites = useCallback(async () => {
-    if (!user) {
-      setFavorites([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
+  const { data: favorites = [], isLoading: loading } = useQuery({
+    queryKey: ['service-favorites', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
       const { data, error } = await supabase
         .from("service_favorites")
         .select("provider_id")
         .eq("user_id", user.id);
-
       if (error) throw error;
-      setFavorites(data?.map(f => f.provider_id) || []);
-    } catch (error) {
-      console.error("Error fetching service favorites:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchFavorites();
-  }, [fetchFavorites]);
+      return data?.map(f => f.provider_id) || [];
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5,
+  });
 
   const isFavorite = useCallback((providerId: string) => {
     return favorites.includes(providerId);
@@ -51,12 +40,9 @@ export function useServiceFavorites() {
 
     const isCurrentlyFavorite = favorites.includes(providerId);
 
-    // Optimistic update
-    if (isCurrentlyFavorite) {
-      setFavorites(prev => prev.filter(id => id !== providerId));
-    } else {
-      setFavorites(prev => [...prev, providerId]);
-    }
+    queryClient.setQueryData(['service-favorites', user.id], (old: string[] = []) =>
+      isCurrentlyFavorite ? old.filter(id => id !== providerId) : [...old, providerId]
+    );
 
     try {
       if (isCurrentlyFavorite) {
@@ -65,46 +51,24 @@ export function useServiceFavorites() {
           .delete()
           .eq("user_id", user.id)
           .eq("provider_id", providerId);
-
         if (error) throw error;
-
-        toast({
-          title: "تمت الإزالة",
-          description: "تم إزالة الخدمة من المفضلة",
-        });
+        toast({ title: "تمت الإزالة", description: "تم إزالة الخدمة من المفضلة" });
       } else {
         const { error } = await supabase
           .from("service_favorites")
           .insert({ user_id: user.id, provider_id: providerId });
-
         if (error) throw error;
-
-        toast({
-          title: "تمت الإضافة",
-          description: "تم إضافة الخدمة إلى المفضلة",
-        });
+        toast({ title: "تمت الإضافة", description: "تم إضافة الخدمة إلى المفضلة" });
       }
     } catch (error) {
-      // Revert optimistic update on error
-      if (isCurrentlyFavorite) {
-        setFavorites(prev => [...prev, providerId]);
-      } else {
-        setFavorites(prev => prev.filter(id => id !== providerId));
-      }
-
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء تحديث المفضلة",
-        variant: "destructive",
-      });
+      queryClient.setQueryData(['service-favorites', user.id], favorites);
+      toast({ title: "خطأ", description: "حدث خطأ أثناء تحديث المفضلة", variant: "destructive" });
     }
-  }, [user, favorites, toast]);
+  }, [user, favorites, toast, queryClient]);
 
-  return {
-    favorites,
-    loading,
-    isFavorite,
-    toggleFavorite,
-    refetch: fetchFavorites,
-  };
+  const refetch = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['service-favorites', user?.id] });
+  }, [queryClient, user?.id]);
+
+  return { favorites, loading, isFavorite, toggleFavorite, refetch };
 }
